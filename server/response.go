@@ -3,11 +3,11 @@ package server
 import (
 	"encoding/json"
 	"net/http"
-	"os"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/schema"
 	"github.com/iancoleman/orderedmap"
+	"github.com/sendelius/go/env"
 )
 
 var validate = validator.New()
@@ -80,7 +80,7 @@ func (h *Response) Sanitize(v any, hidden ...string) *orderedmap.OrderedMap {
 func writeResponse(w http.ResponseWriter, r *http.Request, data any, status ...int) {
 	w.Header().Set("Content-Type", "application/json")
 
-	w.Header().Set("Access-Control-Allow-Origin", "https://"+os.Getenv("BASE_DOMAIN"))
+	w.Header().Set("Access-Control-Allow-Origin", "https://"+env.String("BASE_DOMAIN"))
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")

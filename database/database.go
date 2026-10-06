@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/sendelius/go/env"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -29,7 +30,7 @@ func NewDatabase() (*Database, error) {
 
 	logLevel := logger.Silent
 
-	if os.Getenv("DEV_MODE") == "true" {
+	if env.Bool("DEV_MODE") {
 		logLevel = logger.Info
 	}
 

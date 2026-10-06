@@ -2,43 +2,49 @@ package redis
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/sendelius/go/env"
 )
 
 type Redis struct {
 	Client *redis.Client
+	prefix string
 }
 
 func New() *Redis {
 	r := redis.NewClient(&redis.Options{
-		Addr: os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT"),
+		Addr: env.String("REDIS_HOST") + ":" + env.String("REDIS_PORT"),
 	})
 	return &Redis{
 		Client: r,
+		prefix: env.String("REDIS_PREFIX"),
 	}
 }
 
+func (r *Redis) key(key string) string {
+	return r.prefix + key
+}
+
 func (r *Redis) Set(key string, value string, expiration time.Duration) error {
-	return r.Client.Set(context.Background(), key, value, expiration).Err()
+	return r.Client.Set(context.Background(), r.key(key), value, expiration).Err()
 }
 
 func (r *Redis) Get(key string) (string, error) {
-	return r.Client.Get(context.Background(), key).Result()
+	return r.Client.Get(context.Background(), r.key(key)).Result()
 }
 
 func (r *Redis) GetAndDelete(key string) (string, error) {
-	return r.Client.GetDel(context.Background(), key).Result()
+	return r.Client.GetDel(context.Background(), r.key(key)).Result()
 }
 
 func (r *Redis) Delete(key string) error {
-	return r.Client.Del(context.Background(), key).Err()
+	return r.Client.Del(context.Background(), r.key(key)).Err()
 }
 
 func (r *Redis) Exists(key string) (bool, error) {
-	result, err := r.Client.Exists(context.Background(), key).Result()
+	result, err := r.Client.Exists(context.Background(), r.key(key)).Result()
 	if err != nil {
 		return false, err
 	}
@@ -46,11 +52,11 @@ func (r *Redis) Exists(key string) (bool, error) {
 }
 
 func (r *Redis) Expire(key string, expiration time.Duration) error {
-	return r.Client.Expire(context.Background(), key, expiration).Err()
+	return r.Client.Expire(context.Background(), r.key(key), expiration).Err()
 }
 
 func (r *Redis) TTL(key string) (time.Duration, error) {
-	return r.Client.TTL(context.Background(), key).Result()
+	return r.Client.TTL(context.Background(), r.key(key)).Result()
 }
 
 func (r *Redis) Ping() error {
