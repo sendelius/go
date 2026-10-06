@@ -14,3 +14,7 @@ type Session struct {
 	Token     string      `json:"-" gorm:"type:char(64);uniqueIndex"`          // токен
 	ExpiresAt time.Time   `json:"expires_at"`                                  // дата окончания
 }
+
+func (s *Session) GetSession() *Session {
+	return s
+}
