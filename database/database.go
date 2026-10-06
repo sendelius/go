@@ -91,23 +91,23 @@ func genDbDsn() (string, error) {
 		"DATABASE_DB",
 	}
 
-	env := make(map[string]string, len(requiredEnv))
+	e := make(map[string]string, len(requiredEnv))
 
 	for _, key := range requiredEnv {
 		value, ok := os.LookupEnv(key)
 		if !ok || value == "" {
 			return "", fmt.Errorf("переменная среды %s не установлена", key)
 		}
-		env[key] = value
+		e[key] = value
 	}
 
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		env["DATABASE_USER"],
-		env["DATABASE_PASSWORD"],
-		env["DATABASE_HOST"],
-		env["DATABASE_PORT"],
-		env["DATABASE_DB"],
+		e["DATABASE_USER"],
+		e["DATABASE_PASSWORD"],
+		e["DATABASE_HOST"],
+		e["DATABASE_PORT"],
+		e["DATABASE_DB"],
 	)
 
 	return dsn, nil
