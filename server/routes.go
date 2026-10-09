@@ -10,15 +10,13 @@ import (
 
 func (s *Server) PublicRoute(pattern string, handler http.HandlerFunc) {
 	s.mux.HandleFunc(pattern, withParams(pattern, func(w http.ResponseWriter, req *http.Request) {
-		ctx, err := s.withSession(w, req)
-		if err != nil {
-			writeResponse(w, req, map[string]string{
-				"status": "error",
-				"error":  "не удалось проверить сессию",
-			}, http.StatusInternalServerError)
-			return
+		if s.sessions != nil {
+			ctx, err := s.sessions.CheckRequest(w, req)
+			if err == nil {
+				req = req.WithContext(ctx)
+			}
 		}
-		handler.ServeHTTP(w, req.WithContext(ctx))
+		handler.ServeHTTP(w, req)
 	}))
 }
 
@@ -49,13 +47,6 @@ func (s *Server) ProtectedRoute(pattern string, handler http.HandlerFunc) {
 		}
 		handler.ServeHTTP(w, req.WithContext(ctx))
 	}))
-}
-
-func (s *Server) withSession(w http.ResponseWriter, req *http.Request) (context.Context, error) {
-	if s.sessions == nil {
-		return req.Context(), nil
-	}
-	return s.sessions.CheckRequest(w, req)
 }
 
 func withParams(pattern string, next http.HandlerFunc) http.HandlerFunc {
