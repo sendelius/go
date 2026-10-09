@@ -8,7 +8,7 @@ import (
 	"github.com/sendelius/go/users"
 )
 
-type ContextKey struct{}
+type contextKey struct{}
 
 type RequestChecker interface {
 	CheckRequest(http.ResponseWriter, *http.Request) (context.Context, error)
@@ -30,7 +30,7 @@ func (c *requestChecker[T]) CheckRequest(w http.ResponseWriter, r *http.Request)
 	if isNilSession(current) {
 		return r.Context(), nil
 	}
-	return context.WithValue(r.Context(), ContextKey{}, current), nil
+	return context.WithValue(r.Context(), contextKey{}, current), nil
 }
 
 func isNilSession(value any) bool {
@@ -49,13 +49,13 @@ func isNilSession(value any) bool {
 }
 
 func FromContext(ctx context.Context) (Accessor, bool) {
-	current, ok := ctx.Value(ContextKey{}).(Accessor)
+	current, ok := ctx.Value(contextKey{}).(Accessor)
 	return current, ok
 }
 
-func UserFromContext(ctx context.Context) (*users.Model, bool) {
+func UserFromContext(ctx context.Context) (*users.User, bool) {
 	current, ok := FromContext(ctx)
-	if !ok {
+	if !ok || current == nil || current.GetModel() == nil {
 		return nil, false
 	}
 	return &current.GetModel().User, true

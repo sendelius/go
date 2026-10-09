@@ -116,7 +116,7 @@ func (h *Request) Validate(w http.ResponseWriter, r *http.Request, dst any) bool
 }
 
 func (h *Request) GetParam(r *http.Request, key string) string {
-	params, _ := r.Context().Value(ContextKey{}).(map[string]string)
+	params, _ := r.Context().Value(contextKey{}).(map[string]string)
 	return params[key]
 }
 

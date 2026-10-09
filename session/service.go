@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -53,7 +54,10 @@ func (s *Service[T]) Check(w http.ResponseWriter, r *http.Request) (T, error) {
 	}
 	sessionItem, err := s.getByToken(token)
 	if err != nil {
-		return zero, errors.New("сессия не найдена")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return zero, errors.New("сессия не найдена")
+		}
+		return zero, fmt.Errorf("не удалось проверить сессию: %w", err)
 	}
 	session := sessionItem.GetModel()
 	now := time.Now()
@@ -129,13 +133,16 @@ func (s *Service[T]) Logout(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return errors.New("сессия не найдена")
 	}
-	s.Db.Where("token = ?", s.hashToken(cookie.Value)).Delete(s.factory())
+	err = s.Db.Where("token = ?", s.hashToken(cookie.Value)).Delete(s.factory()).Error
+	if err != nil {
+		return fmt.Errorf("не удалось завершить сессию: %w", err)
+	}
 	s.deleteCookie(w)
 	return nil
 }
 
 func (s *Service[T]) RemoveExpired() error {
-	err := s.Db.Where("expires_at < ?", time.Now()).Delete(s.factory()).Error
+	err := s.Db.Where("expires_at > ? AND expires_at < ?", time.Time{}, time.Now()).Delete(s.factory()).Error
 	return s.Error(err)
 }
 

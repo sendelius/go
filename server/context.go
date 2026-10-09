@@ -1,3 +1,3 @@
 package server
 
-type ContextKey struct{}
+type contextKey struct{}

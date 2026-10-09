@@ -18,11 +18,14 @@ type Server struct {
 }
 
 func New(host string, sessions ...session.RequestChecker) *Server {
+	if len(sessions) > 1 {
+		panic("server: допускается только одна проверка сессии")
+	}
 	server := &Server{
 		host: host,
 		mux:  http.NewServeMux(),
 	}
-	if len(sessions) > 0 {
+	if len(sessions) == 1 {
 		server.sessions = sessions[0]
 	}
 	return server

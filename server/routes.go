@@ -4,28 +4,58 @@ import (
 	"context"
 	"net/http"
 	"strings"
+
+	"github.com/sendelius/go/session"
 )
 
 func (s *Server) PublicRoute(pattern string, handler http.HandlerFunc) {
-	s.mux.HandleFunc(pattern, withParams(pattern, handler))
+	s.mux.HandleFunc(pattern, withParams(pattern, func(w http.ResponseWriter, req *http.Request) {
+		ctx, err := s.withSession(w, req)
+		if err != nil {
+			writeResponse(w, req, map[string]string{
+				"status": "error",
+				"error":  "не удалось проверить сессию",
+			}, http.StatusInternalServerError)
+			return
+		}
+		handler.ServeHTTP(w, req.WithContext(ctx))
+	}))
 }
 
 func (s *Server) ProtectedRoute(pattern string, handler http.HandlerFunc) {
 	s.mux.HandleFunc(pattern, withParams(pattern, func(w http.ResponseWriter, req *http.Request) {
-		if s.sessions != nil {
-			ctx, err := s.sessions.CheckRequest(w, req)
-			if err != nil {
-				writeResponse(w, req, map[string]string{
-					"status": "error",
-					"error":  err.Error(),
-				}, http.StatusUnauthorized)
-				return
-			}
-			req = req.WithContext(ctx)
+		if s.sessions == nil {
+			writeResponse(w, req, map[string]string{
+				"status": "error",
+				"error":  "проверка сессии не настроена",
+			}, http.StatusInternalServerError)
+			return
 		}
 
-		handler.ServeHTTP(w, req)
+		ctx, err := s.sessions.CheckRequest(w, req)
+		if err != nil {
+			writeResponse(w, req, map[string]string{
+				"status": "error",
+				"error":  err.Error(),
+			}, http.StatusUnauthorized)
+			return
+		}
+		if _, ok := session.FromContext(ctx); !ok {
+			writeResponse(w, req, map[string]string{
+				"status": "error",
+				"error":  "требуется авторизация",
+			}, http.StatusUnauthorized)
+			return
+		}
+		handler.ServeHTTP(w, req.WithContext(ctx))
 	}))
+}
+
+func (s *Server) withSession(w http.ResponseWriter, req *http.Request) (context.Context, error) {
+	if s.sessions == nil {
+		return req.Context(), nil
+	}
+	return s.sessions.CheckRequest(w, req)
 }
 
 func withParams(pattern string, next http.HandlerFunc) http.HandlerFunc {
@@ -62,7 +92,7 @@ func withParams(pattern string, next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(req.Context(), ContextKey{}, params)
+		ctx := context.WithValue(req.Context(), contextKey{}, params)
 		next.ServeHTTP(w, req.WithContext(ctx))
 	}
 }
