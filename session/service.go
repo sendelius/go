@@ -141,6 +141,23 @@ func (s *Service[T]) Logout(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func (s *Service[T]) Create(w http.ResponseWriter, userID string) (*Session, error) {
+	token, err := s.generateToken(64)
+	if err != nil {
+		return nil, errors.New("ошибка генерации токена")
+	}
+	session := &Session{
+		UserID:    userID,
+		Token:     s.hashToken(token),
+		ExpiresAt: time.Now().Add(time.Duration(env.Int("SESSION_TTL", 172800))),
+	}
+	if err := s.Db.Create(session).Error; err != nil {
+		return nil, errors.New("ошибка сохранения сессии")
+	}
+	s.setCookie(w, token, session.ExpiresAt)
+	return session, nil
+}
+
 func (s *Service[T]) RemoveExpired() error {
 	err := s.Db.Where("expires_at > ? AND expires_at < ?", time.Time{}, time.Now()).Delete(s.factory()).Error
 	return s.Error(err)
