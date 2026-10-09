@@ -15,6 +15,6 @@ type Session struct {
 	ExpiresAt time.Time   `json:"expires_at"`                                  // дата окончания
 }
 
-func (s *Session) GetSession() *Session {
+func (s *Session) GetModel() *Session {
 	return s
 }

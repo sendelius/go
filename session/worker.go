@@ -5,15 +5,17 @@ import (
 	"time"
 )
 
-type Worker struct {
-	sessions *Service
+type Worker[T Accessor] struct {
+	sessions *Service[T]
 }
 
-func NewWorker(sessions *Service) *Worker {
-	return &Worker{sessions: sessions}
+func NewWorker[T Accessor](sessions *Service[T]) *Worker[T] {
+	return &Worker[T]{
+		sessions: sessions,
+	}
 }
 
-func (w *Worker) Clean() {
+func (w *Worker[T]) Clean() {
 	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()
 	for {

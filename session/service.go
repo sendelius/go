@@ -16,7 +16,7 @@ import (
 )
 
 type Accessor interface {
-	GetSession() *Session
+	GetModel() *Session
 }
 
 type Service[T Accessor] struct {
@@ -62,7 +62,7 @@ func (s *Service[T]) Check(w http.ResponseWriter, r *http.Request) (T, error) {
 	if err != nil {
 		return zero, errors.New("сессия не найдена")
 	}
-	session := sessionItem.GetSession()
+	session := sessionItem.GetModel()
 	now := time.Now()
 	if !session.ExpiresAt.IsZero() && session.ExpiresAt.Before(now) {
 		s.removeByToken(token)
@@ -91,7 +91,7 @@ func (s *Service[T]) Login(w http.ResponseWriter, userID string) (T, error) {
 	}
 	expiresAt := time.Now().Add(s.sessionTTL)
 	sessionItem := s.factory()
-	session := sessionItem.GetSession()
+	session := sessionItem.GetModel()
 	session.UserID = userID
 	session.Token = s.hashToken(token)
 	session.ExpiresAt = expiresAt
@@ -115,7 +115,7 @@ func (s *Service[T]) Bearer(userID string) (string, error) {
 	sessionItem := s.factory()
 	err = s.Db.Where("user_id = ? AND expires_at = ?", userID, time.Time{}).First(sessionItem).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		session := sessionItem.GetSession()
+		session := sessionItem.GetModel()
 		session.UserID = userID
 		session.Token = hash
 		if err := s.Db.Create(sessionItem).Error; err != nil {
@@ -126,7 +126,7 @@ func (s *Service[T]) Bearer(userID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	session := sessionItem.GetSession()
+	session := sessionItem.GetModel()
 	if err := s.Db.
 		Model(sessionItem).
 		Update("token", hash).
@@ -151,7 +151,7 @@ func (s *Service[T]) Logout(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (s *Service[T]) CurrentUser(sessionItem T) (*users.Model, error) {
-	session := sessionItem.GetSession()
+	session := sessionItem.GetModel()
 	return &session.User, nil
 }
 
