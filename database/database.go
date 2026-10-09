@@ -18,7 +18,7 @@ type Database struct {
 	DB *gorm.DB
 }
 
-func NewDatabase() (*Database, error) {
+func New() (*Database, error) {
 	database := &Database{}
 	var err error
 	var dsn string

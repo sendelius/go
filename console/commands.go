@@ -20,7 +20,7 @@ type Commands struct {
 	appName string
 }
 
-func NewCommands(appName string) *Commands {
+func New(appName string) *Commands {
 	cmd := &Commands{
 		items:   make(map[string]*Command),
 		appName: appName,

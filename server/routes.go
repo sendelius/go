@@ -12,23 +12,19 @@ func (s *Server) PublicRoute(pattern string, handler http.HandlerFunc) {
 
 func (s *Server) ProtectedRoute(pattern string, handler http.HandlerFunc) {
 	s.mux.HandleFunc(pattern, withParams(pattern, func(w http.ResponseWriter, req *http.Request) {
-		session, err := s.sessions.Check(w, req)
-		if err != nil {
-			writeResponse(
-				w,
-				req,
-				map[string]string{
+		if s.sessions != nil {
+			ctx, err := s.sessions.CheckRequest(w, req)
+			if err != nil {
+				writeResponse(w, req, map[string]string{
 					"status": "error",
 					"error":  err.Error(),
-				},
-				http.StatusUnauthorized,
-			)
-			return
+				}, http.StatusUnauthorized)
+				return
+			}
+			req = req.WithContext(ctx)
 		}
 
-		ctx := context.WithValue(req.Context(), SessionKey, session)
-
-		handler.ServeHTTP(w, req.WithContext(ctx))
+		handler.ServeHTTP(w, req)
 	}))
 }
 
@@ -66,7 +62,7 @@ func withParams(pattern string, next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(req.Context(), ParamsKey, params)
+		ctx := context.WithValue(req.Context(), ContextKey{}, params)
 		next.ServeHTTP(w, req.WithContext(ctx))
 	}
 }

@@ -6,11 +6,7 @@ type Dictionary[T any] struct {
 	Data    []T
 }
 
-func NewDictionary[T any](
-	title string,
-	version string,
-	data []T,
-) *Dictionary[T] {
+func newDictionary[T any](title string, version string, data []T) *Dictionary[T] {
 	return &Dictionary[T]{
 		Title:   title,
 		Version: version,

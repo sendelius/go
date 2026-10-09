@@ -12,7 +12,7 @@ type Manager struct {
 	root string
 }
 
-func NewManager(root string) *Manager {
+func New(root string) *Manager {
 	return &Manager{
 		root: root,
 	}
@@ -91,5 +91,5 @@ func Load[T any](
 		data = append(data, dictionary.Data...)
 	}
 
-	return NewDictionary(title, version, data), nil
+	return newDictionary(title, version, data), nil
 }

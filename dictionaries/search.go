@@ -141,10 +141,7 @@ func normalize(value string) string {
 	return strings.ReplaceAll(value, "ё", "е")
 }
 
-func (d *Dictionary[T]) Search(
-	value string,
-	config SearchConfig[T],
-) []SearchResult[T] {
+func (d *Dictionary[T]) Search(value string, config SearchConfig[T]) []SearchResult[T] {
 	value = normalize(value)
 
 	if value == "" {

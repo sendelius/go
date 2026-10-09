@@ -11,7 +11,6 @@ import (
 
 	"github.com/sendelius/go/env"
 	"github.com/sendelius/go/infrastructure"
-	"github.com/sendelius/go/users"
 	"gorm.io/gorm"
 )
 
@@ -32,10 +31,7 @@ func NewService(db *gorm.DB) *Service[*Session] {
 	})
 }
 
-func NewServiceModel[T Accessor](
-	db *gorm.DB,
-	factory func() T,
-) *Service[T] {
+func NewServiceModel[T Accessor](db *gorm.DB, factory func() T) *Service[T] {
 	return &Service[T]{
 		BaseService: infrastructure.NewBaseService[T](db),
 		sessionTTL:  time.Duration(env.Int("SESSION_TTL", 172800)) * time.Second,
@@ -46,9 +42,6 @@ func NewServiceModel[T Accessor](
 
 func (s *Service[T]) Check(w http.ResponseWriter, r *http.Request) (T, error) {
 	var zero T
-	if !env.Bool("SESSION_ALLOW") {
-		return zero, nil
-	}
 	var token string
 	if bearer, err := s.getBearerToken(r); err == nil {
 		token = strings.TrimSpace(bearer)
@@ -82,9 +75,6 @@ func (s *Service[T]) Check(w http.ResponseWriter, r *http.Request) (T, error) {
 
 func (s *Service[T]) Login(w http.ResponseWriter, userID string) (T, error) {
 	var zero T
-	if !env.Bool("SESSION_ALLOW") {
-		return zero, nil
-	}
 	token, err := s.generateToken(32)
 	if err != nil {
 		return zero, errors.New("не удалось создать сессию")
@@ -104,9 +94,6 @@ func (s *Service[T]) Login(w http.ResponseWriter, userID string) (T, error) {
 }
 
 func (s *Service[T]) Bearer(userID string) (string, error) {
-	if !env.Bool("SESSION_ALLOW") {
-		return "", nil
-	}
 	token, err := s.generateToken(64)
 	if err != nil {
 		return "", errors.New("не удалось создать токен")
@@ -138,9 +125,6 @@ func (s *Service[T]) Bearer(userID string) (string, error) {
 }
 
 func (s *Service[T]) Logout(w http.ResponseWriter, r *http.Request) error {
-	if !env.Bool("SESSION_ALLOW") {
-		return nil
-	}
 	cookie, err := r.Cookie(s.cookieKey)
 	if err != nil {
 		return errors.New("сессия не найдена")
@@ -148,11 +132,6 @@ func (s *Service[T]) Logout(w http.ResponseWriter, r *http.Request) error {
 	s.Db.Where("token = ?", s.hashToken(cookie.Value)).Delete(s.factory())
 	s.deleteCookie(w)
 	return nil
-}
-
-func (s *Service[T]) CurrentUser(sessionItem T) (*users.Model, error) {
-	session := sessionItem.GetModel()
-	return &session.User, nil
 }
 
 func (s *Service[T]) RemoveExpired() error {

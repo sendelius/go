@@ -19,10 +19,6 @@ type QuerySetter interface {
 	SetQueryParam(key string, value any)
 }
 
-func (h *Request) GetSession(r *http.Request) any {
-	return r.Context().Value(SessionKey)
-}
-
 func (h *Request) Validate(w http.ResponseWriter, r *http.Request, dst any) bool {
 	var err error
 
@@ -120,7 +116,7 @@ func (h *Request) Validate(w http.ResponseWriter, r *http.Request, dst any) bool
 }
 
 func (h *Request) GetParam(r *http.Request, key string) string {
-	params, _ := r.Context().Value(ParamsKey).(map[string]string)
+	params, _ := r.Context().Value(ContextKey{}).(map[string]string)
 	return params[key]
 }
 

@@ -14,15 +14,18 @@ type Server struct {
 	host     string
 	mux      *http.ServeMux
 	DB       *gorm.DB
-	sessions session.Service
+	sessions session.RequestChecker
 }
 
-func NewServer(host string, sessions session.Service) *Server {
-	return &Server{
-		host:     host,
-		mux:      http.NewServeMux(),
-		sessions: sessions,
+func New(host string, sessions ...session.RequestChecker) *Server {
+	server := &Server{
+		host: host,
+		mux:  http.NewServeMux(),
 	}
+	if len(sessions) > 0 {
+		server.sessions = sessions[0]
+	}
+	return server
 }
 
 func (s *Server) Start() {
