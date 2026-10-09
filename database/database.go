@@ -84,11 +84,11 @@ func (d *Database) AutoMigrate(dst ...interface{}) {
 
 func genDbDsn() (string, error) {
 	requiredEnv := []string{
-		"DATABASE_USER",
-		"DATABASE_PASSWORD",
-		"DATABASE_HOST",
-		"DATABASE_PORT",
-		"DATABASE_DB",
+		"POSTGRES_USER",
+		"POSTGRES_PASSWORD",
+		"POSTGRES_HOST",
+		"POSTGRES_PORT",
+		"POSTGRES_DB",
 	}
 
 	e := make(map[string]string, len(requiredEnv))
@@ -103,11 +103,11 @@ func genDbDsn() (string, error) {
 
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		e["DATABASE_USER"],
-		e["DATABASE_PASSWORD"],
-		e["DATABASE_HOST"],
-		e["DATABASE_PORT"],
-		e["DATABASE_DB"],
+		e["POSTGRES_USER"],
+		e["POSTGRES_PASSWORD"],
+		e["POSTGRES_HOST"],
+		e["POSTGRES_PORT"],
+		e["POSTGRES_DB"],
 	)
 
 	return dsn, nil
