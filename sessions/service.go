@@ -151,7 +151,7 @@ func (s *Service[T]) Create(w http.ResponseWriter, userID string) (*Session, err
 	session := &Session{
 		UserID:    userID,
 		Token:     hashToken(token),
-		ExpiresAt: time.Now().Add(time.Duration(env.Int("SESSION_TTL", 172800))),
+		ExpiresAt: time.Now().Add(s.sessionTTL),
 	}
 	if err = s.Db().Create(session).Error; err != nil {
 		return nil, apperrors.New(ErrorCreateComplete, "ошибка сохранения сессии", err)

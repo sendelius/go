@@ -80,9 +80,10 @@ func prepareError(err any) *apperrors.Error {
 	case string:
 		appErr = apperrors.New(ErrorUndefined, e)
 	case error:
-		if !errors.As(e, &appErr) {
-			appErr = apperrors.New(ErrorUndefined, e.Error())
+		if errors.As(e, &appErr) {
+			return appErr
 		}
+		appErr = apperrors.New(ErrorUndefined, "внутренняя ошибка сервера", e)
 	default:
 		appErr = apperrors.New(ErrorUndefined, "неизвестная ошибка")
 	}

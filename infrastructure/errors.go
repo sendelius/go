@@ -28,4 +28,5 @@ const (
 	ErrorInvalidTransactionState = "INF-0024"
 	ErrorQueryCanceled           = "INF-0025"
 	ErrorConnection              = "INF-0026"
+	ErrorCloneTypes              = "INF-0027"
 )

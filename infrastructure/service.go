@@ -48,28 +48,40 @@ func (s *Service[T]) DeleteByID(id string) error {
 }
 
 func (s *Service[T]) CloneByID(id string) error {
-	var (
-		item  T
-		clone T
-	)
+	var item T
 
 	if err := s.Db().First(&item, "id = ?", id).Error; err != nil {
-		return apperrors.New(ErrorCloneNotFound, "запись не найдена")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return apperrors.New(ErrorCloneNotFound, "запись не найдена", err)
+		}
+		return s.Error(err)
 	}
 
-	clone = item
-	value := reflect.ValueOf(&clone).Elem()
-	if field := value.FieldByName("ID"); field.IsValid() && field.CanSet() {
-		field.Set(reflect.Zero(field.Type()))
-	}
-	if field := value.FieldByName("CreatedAt"); field.IsValid() && field.CanSet() {
-		field.Set(reflect.Zero(field.Type()))
-	}
-	if field := value.FieldByName("UpdatedAt"); field.IsValid() && field.CanSet() {
-		field.Set(reflect.Zero(field.Type()))
+	value := reflect.ValueOf(item)
+	var clone any
+
+	switch value.Kind() {
+	case reflect.Pointer:
+		if value.IsNil() || value.Elem().Kind() != reflect.Struct {
+			return apperrors.New(ErrorCloneTypes, "тип записи для клонирования должен быть структурой")
+		}
+
+		cloneValue := reflect.New(value.Elem().Type())
+		cloneValue.Elem().Set(value.Elem())
+		resetCloneFields(cloneValue.Elem())
+		clone = cloneValue.Interface()
+
+	case reflect.Struct:
+		cloneValue := reflect.New(value.Type())
+		cloneValue.Elem().Set(value)
+		resetCloneFields(cloneValue.Elem())
+		clone = cloneValue.Interface()
+
+	default:
+		return apperrors.New(ErrorCloneTypes, "тип записи для клонирования должен быть структурой")
 	}
 
-	if err := s.Db().Create(&clone).Error; err != nil {
+	if err := s.Db().Create(clone).Error; err != nil {
 		return s.Error(err)
 	}
 
@@ -270,23 +282,22 @@ func (s *Service[T]) GetList(request *ListRequest, conf *ListConfig) ([]T, int64
 	}
 
 	last := int(math.Ceil(float64(total) / float64(limit)))
-	offset := (page - 1) * limit
-
-	if page > last {
+	if last == 0 {
+		page = 1
+	} else if page > last {
 		page = last
 	}
 
+	offset := (page - 1) * limit
 	if page < last {
 		pagination.Next = new(page + 1)
 	}
-
 	if page > 1 {
 		pagination.Prev = new(page - 1)
 	}
 
 	// получение записей
 	db = db.Limit(limit).Offset(offset)
-
 	if err := db.Find(&items).Error; err != nil {
 		return nil, 0, pagination, s.Error(err)
 	}
@@ -305,7 +316,7 @@ func (s *Service[T]) Error(err error) error {
 
 	pgErr, ok := errors.AsType[*pgconn.PgError](err)
 	if !ok {
-		return apperrors.New(ErrorUndefined, err.Error())
+		return apperrors.New(ErrorUndefined, "внутренняя ошибка базы данных", err)
 	}
 
 	field := getFieldName(pgErr)
@@ -363,6 +374,6 @@ func (s *Service[T]) Error(err error) error {
 	case "08000", "08003", "08006":
 		return apperrors.New(ErrorConnection, "ошибка соединения с базой данных")
 	default:
-		return apperrors.New(ErrorUndefined, fmt.Sprintf("ошибка базы данных (%s): %s", pgErr.Code, pgErr.Error())) // TODO: убрать pgErr.Error() в какой то лог, а на фронте пускай будет просто код ошибки
+		return apperrors.New(ErrorUndefined, "внутренняя ошибка базы данных", pgErr)
 	}
 }

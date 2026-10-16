@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"reflect"
 	"regexp"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -18,4 +19,13 @@ func getFieldName(pgErr *pgconn.PgError) string {
 	}
 
 	return ""
+}
+
+func resetCloneFields(value reflect.Value) {
+	for _, name := range []string{"ID", "CreatedAt", "UpdatedAt"} {
+		field := value.FieldByName(name)
+		if field.IsValid() && field.CanSet() {
+			field.Set(reflect.Zero(field.Type()))
+		}
+	}
 }

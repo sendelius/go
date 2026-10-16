@@ -7,9 +7,9 @@ import (
 )
 
 type Error struct {
-	Code    string
-	Message string
-	Cause   error
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Cause   error  `json:"-"`
 }
 
 func New(code, message string, cause ...error) *Error {
@@ -28,4 +28,8 @@ func New(code, message string, cause ...error) *Error {
 
 func (e *Error) Error() string {
 	return e.Code + ": " + e.Message
+}
+
+func (e *Error) Unwrap() error {
+	return e.Cause
 }

@@ -1,14 +1,15 @@
 package dictionaries
 
-type Module[T any] struct {
-	service *Service[T]
+type Module struct {
+	service *Service
 }
 
-func New[T any](root string) *Service[T] {
-	service := newService[T](root)
-	return service
+func New(root string) *Module {
+	return &Module{
+		service: newService(root),
+	}
 }
 
-func (m *Module[T]) Service() *Service[T] {
+func (m *Module) Service() *Service {
 	return m.service
 }
