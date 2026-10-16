@@ -8,7 +8,7 @@ import (
 	"github.com/sendelius/go/session"
 )
 
-func (s *Server) PublicRoute(pattern string, handler http.HandlerFunc) {
+func (s *Service) PublicRoute(pattern string, handler http.HandlerFunc) {
 	s.mux.HandleFunc(pattern, withParams(pattern, func(w http.ResponseWriter, req *http.Request) {
 		if s.sessions != nil {
 			ctx, err := s.sessions.CheckRequest(w, req)
@@ -20,7 +20,7 @@ func (s *Server) PublicRoute(pattern string, handler http.HandlerFunc) {
 	}))
 }
 
-func (s *Server) ProtectedRoute(pattern string, handler http.HandlerFunc) {
+func (s *Service) ProtectedRoute(pattern string, handler http.HandlerFunc) {
 	s.mux.HandleFunc(pattern, withParams(pattern, func(w http.ResponseWriter, req *http.Request) {
 		if s.sessions == nil {
 			writeResponse(w, req, map[string]string{
