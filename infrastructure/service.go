@@ -9,27 +9,32 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/sendelius/go/apperrors"
+	"github.com/sendelius/go/database"
 	"gorm.io/gorm"
 )
 
 type Service[T any] struct {
-	Db *gorm.DB
+	db *database.Service
 }
 
-func NewService[T any](db *gorm.DB) *Service[T] {
-	return &Service[T]{Db: db}
+func NewService[T any](db *database.Service) *Service[T] {
+	return &Service[T]{db: db}
+}
+
+func (s *Service[T]) Db() *gorm.DB {
+	return s.db.Db()
 }
 
 func (s *Service[T]) GetByID(id string) (T, error) {
 	var item T
-	err := s.Db.First(&item, "id = ?", id).Error
+	err := s.Db().First(&item, "id = ?", id).Error
 	return item, s.Error(err)
 }
 
 func (s *Service[T]) DeleteByID(id string) error {
 	var item T
 
-	tx := s.Db.Delete(&item, "id = ?", id)
+	tx := s.Db().Delete(&item, "id = ?", id)
 
 	if tx.Error != nil {
 		return s.Error(tx.Error)
@@ -48,7 +53,7 @@ func (s *Service[T]) CloneByID(id string) error {
 		clone T
 	)
 
-	if err := s.Db.First(&item, "id = ?", id).Error; err != nil {
+	if err := s.Db().First(&item, "id = ?", id).Error; err != nil {
 		return apperrors.New(ErrorCloneNotFound, "запись не найдена")
 	}
 
@@ -64,7 +69,7 @@ func (s *Service[T]) CloneByID(id string) error {
 		field.Set(reflect.Zero(field.Type()))
 	}
 
-	if err := s.Db.Create(&clone).Error; err != nil {
+	if err := s.Db().Create(&clone).Error; err != nil {
 		return s.Error(err)
 	}
 
@@ -74,7 +79,7 @@ func (s *Service[T]) CloneByID(id string) error {
 func (s *Service[T]) DeleteBulk(ids []string) (*BulkResult, error) {
 	var item T
 
-	tx := s.Db.Where("id IN ?", ids).Delete(&item)
+	tx := s.Db().Where("id IN ?", ids).Delete(&item)
 
 	if tx.Error != nil {
 		return &BulkResult{
@@ -148,7 +153,7 @@ func (s *Service[T]) GetList(request *ListRequest, conf *ListConfig) ([]T, int64
 		pagination ListPagination
 	)
 
-	db := s.Db.Model(new(T))
+	db := s.Db().Model(new(T))
 
 	// фильтры
 	// TODO: доработать фильтры по типу

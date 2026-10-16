@@ -10,7 +10,11 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-func New() *Service {
+type Module struct {
+	service *Service
+}
+
+func New() *Module {
 	service := newService()
 	var err error
 	var dsn string
@@ -41,5 +45,11 @@ func New() *Service {
 		panic("не удалось подключится к базе данных")
 	}
 
-	return service
+	return &Module{
+		service: service,
+	}
+}
+
+func (m *Module) Service() *Service {
+	return m.service
 }

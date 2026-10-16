@@ -1,50 +1,54 @@
 package server
 
 import (
-	"errors"
-	"log"
-	"net"
+	"context"
 	"net/http"
 
 	"github.com/sendelius/go/apperrors"
-	"github.com/sendelius/go/session"
 )
 
 type Service struct {
-	host     string
-	mux      *http.ServeMux
-	sessions session.RequestChecker
+	mux          *http.ServeMux
+	checkRequest func(http.ResponseWriter, *http.Request) (context.Context, error)
 }
 
-func newService(host string) *Service {
+func newService(
+	mux *http.ServeMux,
+	checkRequest func(http.ResponseWriter, *http.Request) (context.Context, error),
+) *Service {
 	return &Service{
-		host: host,
-		mux:  http.NewServeMux(),
+		mux:          mux,
+		checkRequest: checkRequest,
 	}
 }
 
-func (s *Service) Start() {
-	// 404 ошибка
-	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		writeResponse(w, r, map[string]any{
-			"status": "error",
-			"error":  apperrors.New(ErrorNotFound, "метод не найден"),
-		}, http.StatusNotFound)
-	})
+func (s *Service) PublicRoute(pattern string, handler http.HandlerFunc) {
+	s.mux.HandleFunc(pattern, withParams(pattern, func(w http.ResponseWriter, req *http.Request) {
+		if s.checkRequest != nil {
+			ctx, err := s.checkRequest(w, req)
+			if err == nil && ctx != nil {
+				req = req.WithContext(ctx)
+			}
+		}
+		handler.ServeHTTP(w, req)
+	}))
+}
 
-	h := &http.Server{
-		Addr:    s.host,
-		Handler: s.mux,
-	}
-
-	ln, err := net.Listen("tcp", h.Addr)
-	if err != nil {
-		panic(err)
-	}
-
-	log.Printf("Сервер запущен на %s", h.Addr)
-
-	if err := h.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		panic(err)
-	}
+func (s *Service) ProtectedRoute(pattern string, handler http.HandlerFunc) {
+	s.mux.HandleFunc(pattern, withParams(pattern, func(w http.ResponseWriter, req *http.Request) {
+		if s.checkRequest == nil {
+			response.Error(w, req, apperrors.New(ErrorSessionCheckerInvalid, "проверка сессии не настроена"), http.StatusInternalServerError)
+			return
+		}
+		ctx, err := s.checkRequest(w, req)
+		if err != nil {
+			response.Error(w, req, err, http.StatusUnauthorized)
+			return
+		}
+		if ctx == nil {
+			response.Error(w, req, apperrors.New(ErrorSessionInvalid, "требуется авторизация"), http.StatusUnauthorized)
+			return
+		}
+		handler.ServeHTTP(w, req.WithContext(ctx))
+	}))
 }

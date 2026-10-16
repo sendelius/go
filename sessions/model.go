@@ -1,9 +1,9 @@
-package session
+package sessions
 
 import (
 	"time"
 
-	"github.com/sendelius/go/database/infrastructure"
+	"github.com/sendelius/go/infrastructure"
 	"github.com/sendelius/go/users"
 )
 

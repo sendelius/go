@@ -1,4 +1,4 @@
-package session
+package sessions
 
 import (
 	"log"
@@ -9,12 +9,13 @@ type Worker[T Accessor] struct {
 	sessions *Service[T]
 }
 
-func NewWorker[T Accessor](sessions *Service[T]) *Worker[T] {
+func newWorker[T Accessor](sessions *Service[T]) *Worker[T] {
 	return &Worker[T]{
 		sessions: sessions,
 	}
 }
 
+// Clean отчистка старых сессий каждый час
 func (w *Worker[T]) Clean() {
 	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()

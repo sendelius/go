@@ -7,9 +7,9 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/sendelius/go/database/infrastructure"
+	"github.com/sendelius/go/database"
+	"github.com/sendelius/go/infrastructure"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 const (
@@ -25,13 +25,7 @@ type Service[T Accessor] struct {
 	factory func() T
 }
 
-func NewService(db *gorm.DB) *Service[*User] {
-	return NewServiceModel[*User](db, func() *User {
-		return &User{}
-	})
-}
-
-func NewServiceModel[T Accessor](db *gorm.DB, factory func() T) *Service[T] {
+func newService[T Accessor](db *database.Service, factory func() T) *Service[T] {
 	return &Service[T]{
 		Service: infrastructure.NewService[T](db),
 		factory: factory,

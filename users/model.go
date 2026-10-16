@@ -1,7 +1,7 @@
 package users
 
 import (
-	"github.com/sendelius/go/database/infrastructure"
+	"github.com/sendelius/go/infrastructure"
 	"gorm.io/gorm"
 )
 

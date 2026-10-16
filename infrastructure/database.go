@@ -1,5 +1,10 @@
 package infrastructure
 
+type BulkResult struct {
+	Success int64 `json:"success"`
+	Failed  int64 `json:"failed"`
+}
+
 type ListPagination struct {
 	Page  int  `json:"page"`
 	Limit int  `json:"limit"`

@@ -2,13 +2,11 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/schema"
 	"github.com/iancoleman/orderedmap"
-	"github.com/sendelius/go/apperrors"
 	"github.com/sendelius/go/env"
 )
 
@@ -19,7 +17,7 @@ type Response struct {
 }
 
 func (h *Response) Success(w http.ResponseWriter, r *http.Request, data any, status ...int) {
-	writeResponse(w, r, data, status...)
+	h.writeResponse(w, r, data, status...)
 }
 
 func (h *Response) Error(w http.ResponseWriter, r *http.Request, err any, status ...int) {
@@ -28,7 +26,7 @@ func (h *Response) Error(w http.ResponseWriter, r *http.Request, err any, status
 		code = status[0]
 	}
 
-	writeResponse(w, r, map[string]any{
+	h.writeResponse(w, r, map[string]any{
 		"status": "error",
 		"error":  prepareError(err),
 	}, code)
@@ -40,7 +38,7 @@ func (h *Response) ErrorWithField(w http.ResponseWriter, r *http.Request, err an
 		code = status[0]
 	}
 
-	writeResponse(w, r, map[string]any{
+	h.writeResponse(w, r, map[string]any{
 		"status": "error",
 		"error":  prepareError(err),
 		"field":  field,
@@ -53,17 +51,17 @@ func (h *Response) ErrorWithData(w http.ResponseWriter, r *http.Request, err any
 		code = status[0]
 	}
 
-	response := map[string]any{
+	res := map[string]any{
 		"status": "error",
 		"error":  prepareError(err),
 	}
 	for key, value := range data {
 		if key != "status" && key != "error" {
-			response[key] = value
+			res[key] = value
 		}
 	}
 
-	writeResponse(w, r, response, code)
+	h.writeResponse(w, r, res, code)
 }
 
 func (h *Response) Sanitize(v any, hidden ...string) *orderedmap.OrderedMap {
@@ -79,24 +77,7 @@ func (h *Response) Sanitize(v any, hidden ...string) *orderedmap.OrderedMap {
 	return m
 }
 
-func prepareError(err any) *apperrors.Error {
-	var appErr *apperrors.Error
-
-	switch e := err.(type) {
-	case string:
-		appErr = apperrors.New(ErrorUndefined, e)
-	case error:
-		if !errors.As(e, &appErr) {
-			appErr = apperrors.New(ErrorUndefined, e.Error())
-		}
-	default:
-		appErr = apperrors.New(ErrorUndefined, "неизвестная ошибка")
-	}
-
-	return appErr
-}
-
-func writeResponse(w http.ResponseWriter, r *http.Request, data any, status ...int) {
+func (h *Response) writeResponse(w http.ResponseWriter, r *http.Request, data any, status ...int) {
 	w.Header().Set("Content-Type", "application/json")
 
 	w.Header().Set("Access-Control-Allow-Origin", "https://"+env.String("BASE_DOMAIN"))

@@ -38,7 +38,7 @@ func (s *Service[T]) Load(names ...string) ([]*Dictionary[T], error) {
 			var err error
 			files, err = filepath.Glob(filepath.Join(dir, "*.json"))
 			if err != nil {
-				return nil, apperrors.New(ErrorSearchFiles, fmt.Sprintf("ошибка поиска файлов словаря %s: %w", name, err))
+				return nil, apperrors.New(ErrorSearchFiles, fmt.Sprintf("ошибка поиска файлов словаря %s", name), err)
 			}
 		} else {
 			file := filepath.Join(dir, parts[len(parts)-1]+".json")
@@ -58,12 +58,12 @@ func (s *Service[T]) Load(names ...string) ([]*Dictionary[T], error) {
 		for _, path := range files {
 			response, err := os.ReadFile(path)
 			if err != nil {
-				return nil, apperrors.New(ErrorReadFile, fmt.Sprintf("ошибка загрузки файла словаря %s: %w", path, err))
+				return nil, apperrors.New(ErrorReadFile, fmt.Sprintf("ошибка загрузки файла словаря %s", path), err)
 			}
 
 			var dictionary Dictionary[T]
-			if err := json.Unmarshal(response, &dictionary); err != nil {
-				return nil, apperrors.New(ErrorUnmarshalFile, fmt.Sprintf("ошибка разбора файла словаря %s: %w", path, err))
+			if err = json.Unmarshal(response, &dictionary); err != nil {
+				return nil, apperrors.New(ErrorUnmarshalFile, fmt.Sprintf("ошибка разбора файла словаря %s", path), err)
 			}
 
 			if title == "" {
