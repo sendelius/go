@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sendelius/go/database/infrastructure"
 	"github.com/sendelius/go/env"
-	"github.com/sendelius/go/infrastructure"
 	"gorm.io/gorm"
 )
 
@@ -20,24 +20,24 @@ type Accessor interface {
 }
 
 type Service[T Accessor] struct {
-	*infrastructure.BaseService[T]
+	*infrastructure.Service[T]
 	sessionTTL time.Duration
 	cookieKey  string
 	factory    func() T
 }
 
-func NewService(db *gorm.DB) *Service[*Session] {
-	return NewServiceModel[*Session](db, func() *Session {
+func newService(db *gorm.DB) *Service[*Session] {
+	return newServiceModel[*Session](db, func() *Session {
 		return &Session{}
 	})
 }
 
-func NewServiceModel[T Accessor](db *gorm.DB, factory func() T) *Service[T] {
+func newServiceModel[T Accessor](db *gorm.DB, factory func() T) *Service[T] {
 	return &Service[T]{
-		BaseService: infrastructure.NewBaseService[T](db),
-		sessionTTL:  time.Duration(env.Int("SESSION_TTL", 172800)) * time.Second,
-		cookieKey:   "__Secure-snd_session_token",
-		factory:     factory,
+		Service:    infrastructure.NewService[T](db),
+		sessionTTL: time.Duration(env.Int("SESSION_TTL", 172800)) * time.Second,
+		cookieKey:  "__Secure-snd_session_token",
+		factory:    factory,
 	}
 }
 

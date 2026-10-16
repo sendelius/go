@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/sendelius/go/infrastructure"
+	"github.com/sendelius/go/database/infrastructure"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -21,7 +21,7 @@ type Accessor interface {
 }
 
 type Service[T Accessor] struct {
-	*infrastructure.BaseService[T]
+	*infrastructure.Service[T]
 	factory func() T
 }
 
@@ -33,8 +33,8 @@ func NewService(db *gorm.DB) *Service[*User] {
 
 func NewServiceModel[T Accessor](db *gorm.DB, factory func() T) *Service[T] {
 	return &Service[T]{
-		BaseService: infrastructure.NewBaseService[T](db),
-		factory:     factory,
+		Service: infrastructure.NewService[T](db),
+		factory: factory,
 	}
 }
 

@@ -2,11 +2,13 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/schema"
 	"github.com/iancoleman/orderedmap"
+	"github.com/sendelius/go/apperrors"
 	"github.com/sendelius/go/env"
 )
 
@@ -20,32 +22,32 @@ func (h *Response) Success(w http.ResponseWriter, r *http.Request, data any, sta
 	writeResponse(w, r, data, status...)
 }
 
-func (h *Response) Error(w http.ResponseWriter, r *http.Request, error string, status ...int) {
+func (h *Response) Error(w http.ResponseWriter, r *http.Request, err any, status ...int) {
 	code := http.StatusInternalServerError
 	if len(status) > 0 {
 		code = status[0]
 	}
 
-	writeResponse(w, r, map[string]string{
+	writeResponse(w, r, map[string]any{
 		"status": "error",
-		"error":  error,
+		"error":  prepareError(err),
 	}, code)
 }
 
-func (h *Response) ErrorWithField(w http.ResponseWriter, r *http.Request, error string, field string, status ...int) {
+func (h *Response) ErrorWithField(w http.ResponseWriter, r *http.Request, err any, field string, status ...int) {
 	code := http.StatusInternalServerError
 	if len(status) > 0 {
 		code = status[0]
 	}
 
-	writeResponse(w, r, map[string]string{
+	writeResponse(w, r, map[string]any{
 		"status": "error",
-		"error":  error,
+		"error":  prepareError(err),
 		"field":  field,
 	}, code)
 }
 
-func (h *Response) ErrorWithData(w http.ResponseWriter, r *http.Request, error string, data map[string]any, status ...int) {
+func (h *Response) ErrorWithData(w http.ResponseWriter, r *http.Request, err any, data map[string]any, status ...int) {
 	code := http.StatusInternalServerError
 	if len(status) > 0 {
 		code = status[0]
@@ -53,7 +55,7 @@ func (h *Response) ErrorWithData(w http.ResponseWriter, r *http.Request, error s
 
 	response := map[string]any{
 		"status": "error",
-		"error":  error,
+		"error":  prepareError(err),
 	}
 	for key, value := range data {
 		if key != "status" && key != "error" {
@@ -75,6 +77,23 @@ func (h *Response) Sanitize(v any, hidden ...string) *orderedmap.OrderedMap {
 	}
 
 	return m
+}
+
+func prepareError(err any) *apperrors.Error {
+	var appErr *apperrors.Error
+
+	switch e := err.(type) {
+	case string:
+		appErr = apperrors.New(ErrorUndefined, e)
+	case error:
+		if !errors.As(e, &appErr) {
+			appErr = apperrors.New(ErrorUndefined, e.Error())
+		}
+	default:
+		appErr = apperrors.New(ErrorUndefined, "неизвестная ошибка")
+	}
+
+	return appErr
 }
 
 func writeResponse(w http.ResponseWriter, r *http.Request, data any, status ...int) {

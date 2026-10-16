@@ -7,50 +7,35 @@ import (
 	"strings"
 )
 
-type CommandHandler func(args []string) error
-
-type Command struct {
-	Name        string
-	Description string
-	Handler     CommandHandler
-}
-
-type Commands struct {
+type Service struct {
 	items   map[string]*Command
 	appName string
 }
 
-func New(appName string) *Commands {
-	cmd := &Commands{
+func newService(appName string) *Service {
+	return &Service{
 		items:   make(map[string]*Command),
 		appName: appName,
 	}
-
-	cmd.Register("help", "показать список команд", func(args []string) error {
-		cmd.printHelp()
-		return nil
-	})
-
-	return cmd
 }
 
-func (c *Commands) Register(name string, description string, handler CommandHandler) {
-	c.items[name] = &Command{
+func (s *Service) Register(name string, description string, handler CommandHandler) {
+	s.items[name] = &Command{
 		Name:        name,
 		Description: description,
 		Handler:     handler,
 	}
 }
 
-func (c *Commands) Execute() {
+func (s *Service) Execute() {
 	if len(os.Args) < 2 {
-		c.printHelp()
+		s.printHelp()
 		os.Exit(1)
 	}
 
 	cmd := os.Args[1]
 
-	item, ok := c.items[cmd]
+	item, ok := s.items[cmd]
 	if !ok {
 		fmt.Printf("неизвестная команда: %s\n", cmd)
 		os.Exit(1)
@@ -62,18 +47,18 @@ func (c *Commands) Execute() {
 	}
 }
 
-func (c *Commands) printHelp() {
+func (s *Service) printHelp() {
 	var names []string
-	for name := range c.items {
+	for name := range s.items {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 
 	var b strings.Builder
-	b.WriteString("Доступные команды " + c.appName + "' <command>':\n")
+	b.WriteString("Доступные команды " + s.appName + "' <command>':\n")
 
 	for _, name := range names {
-		cmd := c.items[name]
+		cmd := s.items[name]
 		b.WriteString(
 			fmt.Sprintf("  %-15s %s\n", cmd.Name, cmd.Description),
 		)

@@ -2,7 +2,6 @@ package dictionaries
 
 import (
 	"reflect"
-	"sort"
 	"strings"
 )
 
@@ -139,76 +138,4 @@ func normalize(value string) string {
 	value = strings.ToLower(value)
 
 	return strings.ReplaceAll(value, "ё", "е")
-}
-
-func (d *Dictionary[T]) Search(value string, config SearchConfig[T]) []SearchResult[T] {
-	value = normalize(value)
-
-	if value == "" {
-		return nil
-	}
-
-	limit := config.Limit
-
-	if limit <= 0 {
-		limit = 100
-	}
-
-	if limit > 100 {
-		limit = 100
-	}
-
-	results := make([]SearchResult[T], 0)
-
-	for _, item := range d.Data {
-		best := 0.0
-
-		for _, field := range config.Fields {
-			fieldValue := getField(item, field)
-
-			var current float64
-
-			if config.Similarity {
-				current = similarityScore(
-					fieldValue,
-					value,
-				)
-			} else {
-				current = score(
-					fieldValue,
-					value,
-				)
-			}
-
-			if current > best {
-				best = current
-			}
-		}
-
-		if best > 0 {
-			results = append(results, SearchResult[T]{
-				Item:  item,
-				Score: best,
-			})
-		}
-	}
-
-	sort.SliceStable(results, func(i, j int) bool {
-		if results[i].Score != results[j].Score {
-			return results[i].Score > results[j].Score
-		}
-
-		if config.Priority != nil {
-			return config.Priority(results[i].Item) >
-				config.Priority(results[j].Item)
-		}
-
-		return false
-	})
-
-	if len(results) > limit {
-		results = results[:limit]
-	}
-
-	return results
 }

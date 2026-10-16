@@ -1,12 +1,12 @@
 package users
 
 import (
-	"github.com/sendelius/go/infrastructure"
+	"github.com/sendelius/go/database/infrastructure"
 	"gorm.io/gorm"
 )
 
 type User struct {
-	infrastructure.BaseModel
+	infrastructure.Model
 	Login    string `json:"login" gorm:"uniqueIndex"` // логин
 	Password string `json:"-"`                        // пароль
 	Status   string `json:"status"`                   // статус
@@ -24,7 +24,7 @@ func (m *User) BeforeSave(*gorm.DB) error {
 }
 
 func (m *User) BeforeCreate(tx *gorm.DB) error {
-	if err := m.BaseModel.BeforeCreate(tx); err != nil {
+	if err := m.Model.BeforeCreate(tx); err != nil {
 		return err
 	}
 	return nil
