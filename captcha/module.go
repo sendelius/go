@@ -9,15 +9,16 @@ type Module struct {
 	service *Service
 }
 
-func New(srv *server.Service, rds *redis.Service) *Module {
+func New(rds *redis.Service) *Module {
 	service := newService(rds)
-	handler := newHandler(service)
-
-	registerRoutes(srv, handler)
-
 	return &Module{
 		service: service,
 	}
+}
+
+func (m *Module) Start(srv *server.Service) {
+	handler := newHandler(m.service)
+	registerRoutes(srv, handler)
 }
 
 func (m *Module) Service() *Service {

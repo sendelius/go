@@ -8,6 +8,9 @@ import (
 type User struct {
 	infrastructure.Model
 	Login    string `json:"login" gorm:"uniqueIndex"` // логин
+	Name     string `json:"name"`                     // имя
+	Email    string `json:"email"`                    // email
+	Phone    string `json:"phone"`                    // телефон
 	Password string `json:"-"`                        // пароль
 	Status   string `json:"status"`                   // статус
 }

@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/sendelius/go/apperrors"
 	"github.com/sendelius/go/database"
 	"github.com/sendelius/go/infrastructure"
 	"golang.org/x/crypto/bcrypt"
@@ -30,6 +31,52 @@ func newService[T Accessor](db *database.Service, factory func() T) *Service[T] 
 		Service: infrastructure.NewService[T](db),
 		factory: factory,
 	}
+}
+
+func (s *Service[T]) GetByLogin(login string) (T, error) {
+	item := s.factory()
+	err := s.Db().First(item, "login = ?", login).Error
+	return item, s.Error(err)
+}
+
+func (s *Service[T]) Check(login string, password string) (T, string, error) {
+	userItem, err := s.GetByLogin(login)
+	if err != nil {
+		var zero T
+		return zero, "login", apperrors.New(ErrorNotFound, "пользователь не найден")
+	}
+
+	user := userItem.GetModel()
+	if user.Status != "public" {
+		var zero T
+		return zero, "login", apperrors.New(ErrorNotActive, "пользователь не активирован, ожидайте решения администрации")
+	}
+
+	if !s.CheckPassword(user.Password, password) {
+		var zero T
+		return zero, "password", apperrors.New(ErrorPasswordInvalid, "неверный пароль")
+	}
+
+	return userItem, "", nil
+}
+
+func (s *Service[T]) Create(item T) (T, string, error) {
+	model := item.GetModel()
+
+	if len(model.Login) == 0 && len(model.Email) > 0 {
+		model.Login = s.GenerateLogin(model.Email)
+	}
+
+	if len(model.Password) == 0 {
+		model.Password = s.HashPassword(s.GeneratePassword())
+	}
+
+	if err := s.Db().Create(item).Error; err != nil {
+		var zero T
+		return zero, "name", apperrors.New(ErrorCreate, "ошибка сохранения пользователя", err)
+	}
+
+	return item, "", nil
 }
 
 func (s *Service[T]) HashPassword(password string) string {

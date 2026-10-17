@@ -167,9 +167,9 @@ func (s *Service[T]) RemoveExpired() error {
 }
 
 func (s *Service[T]) GetByToken(token string) (T, error) {
-	sessionItem := s.factory()
-	err := s.Db().Preload("User").First(sessionItem, "token = ?", hashToken(token)).Error
-	return sessionItem, s.Error(err)
+	item := s.factory()
+	err := s.Db().Preload("User").First(item, "token = ?", hashToken(token)).Error
+	return item, s.Error(err)
 }
 
 func (s *Service[T]) RemoveByToken(token string) {
