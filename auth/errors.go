@@ -1,7 +1,7 @@
 package auth
 
 const (
-	ErrorLoginAlready    = "AUT-0001"
-	ErrorSessionNotFound = "AUT-0002"
-	ErrorUserNotFound    = "AUT-0003"
+	ErrorLoginAlready    = "SND:AUT:0001"
+	ErrorSessionNotFound = "SND:AUT:0002"
+	ErrorUserNotFound    = "SND:AUT:0003"
 )

@@ -1,14 +1,14 @@
 package server
 
 const (
-	ErrorUndefined             = "SRV-0000"
-	ErrorNotFound              = "SRV-0001"
-	ErrorSessionCheckerInvalid = "SRV-0002"
-	ErrorSessionInvalid        = "SRV-0003"
-	ErrorRequestTypeInvalid    = "SRV-0004"
-	ErrorRequestJsonInvalid    = "SRV-0005"
-	ErrorRequestEmptyBody      = "SRV-0006"
-	ErrorRequestBodyInvalid    = "SRV-0007"
-	ErrorRequestValidation     = "SRV-0008"
-	ErrorMethodNotAllowed      = "SRV-0009"
+	ErrorUndefined             = "SND:SRV:0000"
+	ErrorNotFound              = "SND:SRV:0001"
+	ErrorSessionCheckerInvalid = "SND:SRV:0002"
+	ErrorSessionInvalid        = "SND:SRV:0003"
+	ErrorRequestTypeInvalid    = "SND:SRV:0004"
+	ErrorRequestJsonInvalid    = "SND:SRV:0005"
+	ErrorRequestEmptyBody      = "SND:SRV:0006"
+	ErrorRequestBodyInvalid    = "SND:SRV:0007"
+	ErrorRequestValidation     = "SND:SRV:0008"
+	ErrorMethodNotAllowed      = "SND:SRV:0009"
 )

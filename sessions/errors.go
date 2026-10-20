@@ -1,15 +1,15 @@
 package sessions
 
 const (
-	ErrorTokenNotFound   = "SES-0001"
-	ErrorSessionNotFound = "SES-0002"
-	ErrorSessionExpired  = "SES-0003"
-	ErrorSessionExtend   = "SES-0004"
-	ErrorSessionCreate   = "SES-0005"
-	ErrorBearerCreate    = "SES-0006"
-	ErrorBearerUpdate    = "SES-0007"
-	ErrorLogoutNotFound  = "SES-0008"
-	ErrorLogoutComplete  = "SES-0009"
-	ErrorCreate          = "SES-0010"
-	ErrorCreateComplete  = "SES-0011"
+	ErrorTokenNotFound   = "SND:SES:0001"
+	ErrorSessionNotFound = "SND:SES:0002"
+	ErrorSessionExpired  = "SND:SES:0003"
+	ErrorSessionExtend   = "SND:SES:0004"
+	ErrorSessionCreate   = "SND:SES:0005"
+	ErrorBearerCreate    = "SND:SES:0006"
+	ErrorBearerUpdate    = "SND:SES:0007"
+	ErrorLogoutNotFound  = "SND:SES:0008"
+	ErrorLogoutComplete  = "SND:SES:0009"
+	ErrorCreate          = "SND:SES:0010"
+	ErrorCreateComplete  = "SND:SES:0011"
 )

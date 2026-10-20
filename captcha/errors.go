@@ -1,9 +1,9 @@
 package captcha
 
 const (
-	ErrorChallengeCreate = "CAP-0001"
-	ErrorVerifyNotFound  = "CAP-0002"
-	ErrorVerifyInvalid   = "CAP-0003"
-	ErrorVerifyCheck     = "CAP-0004"
-	ErrorConsumeCheck    = "CAP-0005"
+	ErrorChallengeCreate = "SND:CAP:0001"
+	ErrorVerifyNotFound  = "SND:CAP:0002"
+	ErrorVerifyInvalid   = "SND:CAP:0003"
+	ErrorVerifyCheck     = "SND:CAP:0004"
+	ErrorConsumeCheck    = "SND:CAP:0005"
 )

@@ -1,8 +1,8 @@
 package users
 
 const (
-	ErrorNotFound        = "USR-0001"
-	ErrorNotActive       = "USR-0002"
-	ErrorPasswordInvalid = "USR-0003"
-	ErrorCreate          = "USR-0004"
+	ErrorNotFound        = "SND:USR:0001"
+	ErrorNotActive       = "SND:USR:0002"
+	ErrorPasswordInvalid = "SND:USR:0003"
+	ErrorCreate          = "SND:USR:0004"
 )
