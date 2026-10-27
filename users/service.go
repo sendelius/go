@@ -61,6 +61,7 @@ func (s *Service[T]) Check(login string, password string) (T, string, error) {
 }
 
 func (s *Service[T]) Create(item T) (T, string, error) {
+	var zero T
 	model := item.GetModel()
 
 	if len(model.Login) == 0 && len(model.Email) > 0 {
@@ -71,8 +72,31 @@ func (s *Service[T]) Create(item T) (T, string, error) {
 		model.Password = s.HashPassword(s.GeneratePassword())
 	}
 
+	if len(model.Email) > 0 {
+		err := s.Db().First(&model, "email = ?", model.Email).Error
+		if err == nil {
+			if model.Status != "public" {
+				return zero, "email", apperrors.New(ErrorCreateAlreadySubmitted, "по указанному email уже оформлена заявка на регистрацию")
+			} else {
+				return zero, "email", apperrors.New(ErrorCreateAlreadyRegistration, "по указанному email уже зарегистрирован пользователь")
+			}
+		}
+	} else {
+		return zero, "email", apperrors.New(ErrorCreateEmailRequired, "поле email обязательно для заполнения")
+	}
+
+	if len(model.Phone) > 0 {
+		err := s.Db().First(&model, "phone = ?", model.Phone).Error
+		if err == nil {
+			if model.Status != "public" {
+				return zero, "phone", apperrors.New(ErrorCreateAlreadySubmitted, "по указанному телефону уже оформлена заявка на регистрацию")
+			} else {
+				return zero, "phone", apperrors.New(ErrorCreateAlreadyRegistration, "по указанному телефону уже зарегистрирован пользователь")
+			}
+		}
+	}
+
 	if err := s.Db().Create(item).Error; err != nil {
-		var zero T
 		return zero, "name", apperrors.New(ErrorCreate, "ошибка сохранения пользователя", err)
 	}
 	return item, "", nil
