@@ -8,33 +8,37 @@ import (
 	"github.com/sendelius/go/server"
 )
 
-type Module struct {
-	service *Service[*Session]
-	worker  *Worker[*Session]
+type Module[T Accessor] struct {
+	service *Service[T]
+	worker  *Worker[T]
 }
 
-func New(db *database.Service) *Module {
-	service := newService(db, func() *Session {
+func New(db *database.Service) *Module[*Session] {
+	return NewCustom[*Session](db, func() *Session {
 		return &Session{}
 	})
+}
+
+func NewCustom[T Accessor](db *database.Service, factory func() T) *Module[T] {
+	service := newService(db, factory)
 	worker := newWorker(service)
-	return &Module{
+	return &Module[T]{
 		service: service,
 		worker:  worker,
 	}
 }
 
-func (m *Module) Start(srv *server.Service) {
+func (m *Module[T]) Start(srv *server.Service) {
 	handler := newHandler()
 	registerRoutes(srv, handler)
 	go m.worker.Clean()
 }
 
-func (m *Module) Service() *Service[*Session] {
+func (m *Module[T]) Service() *Service[T] {
 	return m.service
 }
 
-func (m *Module) CheckRequest(w http.ResponseWriter, r *http.Request) (context.Context, error) {
+func (m *Module[T]) CheckRequest(w http.ResponseWriter, r *http.Request) (context.Context, error) {
 	current, err := m.service.Check(w, r)
 	if err != nil {
 		return nil, err

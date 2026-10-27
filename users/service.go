@@ -24,14 +24,12 @@ type Accessor interface {
 type Service[T Accessor] struct {
 	*infrastructure.Service[T]
 	factory func() T
-	hooks   Hooks[T]
 }
 
-func newService[T Accessor](db *database.Service, factory func() T, hooks Hooks[T]) *Service[T] {
+func newService[T Accessor](db *database.Service, factory func() T) *Service[T] {
 	return &Service[T]{
 		Service: infrastructure.NewService[T](db),
 		factory: factory,
-		hooks:   hooks,
 	}
 }
 
@@ -63,13 +61,6 @@ func (s *Service[T]) Check(login string, password string) (T, string, error) {
 }
 
 func (s *Service[T]) Create(item T) (T, string, error) {
-	for _, hook := range s.hooks.BeforeCreate {
-		if err := hook(item); err != nil {
-			var zero T
-			return zero, "", err
-		}
-	}
-
 	model := item.GetModel()
 
 	if len(model.Login) == 0 && len(model.Email) > 0 {
@@ -84,13 +75,6 @@ func (s *Service[T]) Create(item T) (T, string, error) {
 		var zero T
 		return zero, "name", apperrors.New(ErrorCreate, "ошибка сохранения пользователя", err)
 	}
-
-	for _, hook := range s.hooks.AfterCreate {
-		if err := hook(item); err != nil {
-			return item, "", err
-		}
-	}
-
 	return item, "", nil
 }
 

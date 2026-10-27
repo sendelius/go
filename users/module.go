@@ -5,32 +5,27 @@ import (
 	"github.com/sendelius/go/server"
 )
 
-type Module struct {
-	service *Service[*User]
+type Module[T Accessor] struct {
+	service *Service[T]
 }
 
-func New(db *database.Service, hooks ...Hooks[*User]) *Module {
-	var h Hooks[*User]
-
-	for _, hook := range hooks {
-		h.BeforeCreate = append(h.BeforeCreate, hook.BeforeCreate...)
-		h.AfterCreate = append(h.AfterCreate, hook.AfterCreate...)
-	}
-
-	service := newService(db, func() *User {
+func New(db *database.Service) *Module[*User] {
+	return NewCustom[*User](db, func() *User {
 		return &User{}
-	}, h)
+	})
+}
 
-	return &Module{
-		service: service,
+func NewCustom[T Accessor](db *database.Service, factory func() T) *Module[T] {
+	return &Module[T]{
+		service: newService(db, factory),
 	}
 }
 
-func (m *Module) Start(srv *server.Service) {
+func (m *Module[T]) Start(srv *server.Service) {
 	handler := newHandler()
 	registerRoutes(srv, handler)
 }
 
-func (m *Module) Service() *Service[*User] {
+func (m *Module[T]) Service() *Service[T] {
 	return m.service
 }
