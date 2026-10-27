@@ -21,6 +21,18 @@ type Accessor interface {
 	GetModel() *User
 }
 
+type ServiceInterface[T Accessor] interface {
+	NewModel() T
+	GetByLogin(login string) (T, error)
+	Check(login, password string) (T, string, error)
+	Create(item T) (T, string, error)
+	GetByID(id string) (T, error)
+	HashPassword(password string) string
+	CheckPassword(hash, password string) bool
+	GeneratePassword(length ...int) string
+	GenerateLogin(email string) string
+}
+
 type Service[T Accessor] struct {
 	*infrastructure.Service[T]
 	factory func() T
@@ -31,6 +43,10 @@ func newService[T Accessor](db *database.Service, factory func() T) *Service[T] 
 		Service: infrastructure.NewService[T](db),
 		factory: factory,
 	}
+}
+
+func (s *Service[T]) NewModel() T {
+	return s.factory()
 }
 
 func (s *Service[T]) GetByLogin(login string) (T, error) {
@@ -77,9 +93,8 @@ func (s *Service[T]) Create(item T) (T, string, error) {
 		if err == nil {
 			if model.Status != "public" {
 				return zero, "email", apperrors.New(ErrorCreateAlreadySubmitted, "по указанному email уже оформлена заявка на регистрацию")
-			} else {
-				return zero, "email", apperrors.New(ErrorCreateAlreadyRegistration, "по указанному email уже зарегистрирован пользователь")
 			}
+			return zero, "email", apperrors.New(ErrorCreateAlreadyRegistration, "по указанному email уже зарегистрирован пользователь")
 		}
 	} else {
 		return zero, "email", apperrors.New(ErrorCreateEmailRequired, "поле email обязательно для заполнения")
@@ -90,9 +105,8 @@ func (s *Service[T]) Create(item T) (T, string, error) {
 		if err == nil {
 			if model.Status != "public" {
 				return zero, "phone", apperrors.New(ErrorCreateAlreadySubmitted, "по указанному телефону уже оформлена заявка на регистрацию")
-			} else {
-				return zero, "phone", apperrors.New(ErrorCreateAlreadyRegistration, "по указанному телефону уже зарегистрирован пользователь")
 			}
+			return zero, "phone", apperrors.New(ErrorCreateAlreadyRegistration, "по указанному телефону уже зарегистрирован пользователь")
 		}
 	}
 

@@ -5,26 +5,33 @@ import (
 
 	"github.com/sendelius/go/captcha"
 	"github.com/sendelius/go/infrastructure"
+	"github.com/sendelius/go/sessions"
 	"github.com/sendelius/go/users"
 )
 
-type Handler struct {
+type Handler[
+	TUser users.Accessor,
+	TSession sessions.Accessor,
+] struct {
 	infrastructure.Handler
-	auth    *Service
+	auth    *Service[TUser, TSession]
 	captcha *captcha.Service
 }
 
-func newHandler(
-	auth *Service,
+func newHandler[
+	TUser users.Accessor,
+	TSession sessions.Accessor,
+](
+	auth *Service[TUser, TSession],
 	captcha *captcha.Service,
-) *Handler {
-	return &Handler{
+) *Handler[TUser, TSession] {
+	return &Handler[TUser, TSession]{
 		auth:    auth,
 		captcha: captcha,
 	}
 }
 
-func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+func (h *Handler[TUser, TSession]) Login(w http.ResponseWriter, r *http.Request) {
 	request := new(struct {
 		Login    string `json:"login" validate:"required"`
 		Password string `json:"password" validate:"required"`
@@ -46,11 +53,11 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.Response.Success(w, r, map[string]string{
-		"token": session.Token,
+		"token": session.GetModel().Token,
 	})
 }
 
-func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+func (h *Handler[TUser, TSession]) Register(w http.ResponseWriter, r *http.Request) {
 	request := new(struct {
 		Name    string `json:"name" validate:"required"`
 		Email   string `json:"email" validate:"required"`
@@ -66,11 +73,14 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	field, err := h.auth.Register(&users.User{
-		Name:  request.Name,
-		Email: request.Email,
-		Phone: request.Phone,
-	})
+	user := h.auth.NewUserModel()
+	model := user.GetModel()
+
+	model.Name = request.Name
+	model.Email = request.Email
+	model.Phone = request.Phone
+
+	field, err := h.auth.Register(user)
 	if err != nil {
 		h.Response.ErrorWithField(w, r, err, field)
 		return
@@ -79,7 +89,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	h.Response.Success(w, r, nil, http.StatusCreated)
 }
 
-func (h *Handler) Forgot(w http.ResponseWriter, r *http.Request) {
+func (h *Handler[TUser, TSession]) Forgot(w http.ResponseWriter, r *http.Request) {
 	request := new(struct {
 		Email   string `json:"email" validate:"required"`
 		Captcha string `json:"captcha"`
@@ -101,7 +111,7 @@ func (h *Handler) Forgot(w http.ResponseWriter, r *http.Request) {
 	h.Response.Success(w, r, nil)
 }
 
-func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+func (h *Handler[TUser, TSession]) Logout(w http.ResponseWriter, r *http.Request) {
 	err := h.auth.Logout(w, r)
 	if err != nil {
 		h.Response.Error(w, r, err)
@@ -110,7 +120,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	h.Response.Success(w, r, nil)
 }
 
-func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+func (h *Handler[TUser, TSession]) Me(w http.ResponseWriter, r *http.Request) {
 	user, err := h.auth.Me(r)
 	if err != nil {
 		h.Response.Error(w, r, err, http.StatusNotFound)

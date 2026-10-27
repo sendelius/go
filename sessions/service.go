@@ -17,6 +17,18 @@ type Accessor interface {
 	GetModel() *Session
 }
 
+type ServiceInterface[T Accessor] interface {
+	NewModel() T
+	Check(w http.ResponseWriter, r *http.Request) (T, error)
+	Login(w http.ResponseWriter, userID string) (T, error)
+	Bearer(userID string) (string, error)
+	Logout(w http.ResponseWriter, r *http.Request) error
+	Create(w http.ResponseWriter, userID string) (*Session, error)
+	RemoveExpired() error
+	GetByToken(token string) (T, error)
+	RemoveByToken(token string)
+}
+
 type Service[T Accessor] struct {
 	*infrastructure.Service[T]
 	sessionTTL time.Duration
@@ -29,6 +41,10 @@ func newService[T Accessor](db *database.Service, factory func() T) *Service[T] 
 		sessionTTL: time.Duration(env.Int("SESSION_TTL", 172800)) * time.Second,
 		factory:    factory,
 	}
+}
+
+func (s *Service[T]) NewModel() T {
+	return s.factory()
 }
 
 func (s *Service[T]) Check(w http.ResponseWriter, r *http.Request) (T, error) {
