@@ -20,11 +20,11 @@ type Accessor interface {
 type ServiceInterface[T Accessor] interface {
 	NewModel() T
 	Check(w http.ResponseWriter, r *http.Request) (T, error)
-	Bearer(userID string) (string, error)
-	Logout(w http.ResponseWriter, r *http.Request) error
-	Create(w http.ResponseWriter, userID string) (T, error)
-	RemoveExpired() error
 	GetByToken(token string) (T, error)
+	Create(w http.ResponseWriter, userID string) (T, error)
+	CreateBearer(userID string) (string, error)
+	RemoveCurrent(w http.ResponseWriter, r *http.Request) error
+	RemoveExpired() error
 	RemoveByToken(token string)
 }
 
@@ -88,7 +88,37 @@ func (s *Service[T]) Check(w http.ResponseWriter, r *http.Request) (T, error) {
 	return sessionItem, nil
 }
 
-func (s *Service[T]) Bearer(userID string) (string, error) {
+func (s *Service[T]) GetByToken(token string) (T, error) {
+	item := s.factory()
+	err := s.Db().Preload("User").First(item, "token = ?", hashToken(token)).Error
+	return item, s.Error(err)
+}
+
+func (s *Service[T]) Create(w http.ResponseWriter, userID string) (T, error) {
+	var zero T
+
+	token, err := generateToken(64)
+	if err != nil {
+		return zero, apperrors.New(ErrorCreate, "ошибка генерации токена", err)
+	}
+
+	expiresAt := time.Now().Add(s.sessionTTL)
+	sessionItem := s.factory()
+	session := sessionItem.GetModel()
+	session.UserID = userID
+	session.Token = hashToken(token)
+	session.ExpiresAt = expiresAt
+
+	if err = s.Db().Create(sessionItem).Error; err != nil {
+		return zero, apperrors.New(ErrorCreateComplete, "ошибка сохранения сессии", err)
+	}
+
+	setCookieToken(w, token, expiresAt)
+	session.Token = token
+	return sessionItem, nil
+}
+
+func (s *Service[T]) CreateBearer(userID string) (string, error) {
 	token, err := generateToken(64)
 	if err != nil {
 		return "", apperrors.New(ErrorBearerCreate, "не удалось создать токен", err)
@@ -119,7 +149,7 @@ func (s *Service[T]) Bearer(userID string) (string, error) {
 	return token, nil
 }
 
-func (s *Service[T]) Logout(w http.ResponseWriter, r *http.Request) error {
+func (s *Service[T]) RemoveCurrent(w http.ResponseWriter, r *http.Request) error {
 	cookie, err := getCookieToken(r)
 	if err != nil {
 		return apperrors.New(ErrorLogoutNotFound, "сессия не найдена", err)
@@ -134,39 +164,9 @@ func (s *Service[T]) Logout(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (s *Service[T]) Create(w http.ResponseWriter, userID string) (T, error) {
-	var zero T
-
-	token, err := generateToken(64)
-	if err != nil {
-		return zero, apperrors.New(ErrorCreate, "ошибка генерации токена", err)
-	}
-
-	expiresAt := time.Now().Add(s.sessionTTL)
-	sessionItem := s.factory()
-	session := sessionItem.GetModel()
-	session.UserID = userID
-	session.Token = hashToken(token)
-	session.ExpiresAt = expiresAt
-
-	if err = s.Db().Create(sessionItem).Error; err != nil {
-		return zero, apperrors.New(ErrorCreateComplete, "ошибка сохранения сессии", err)
-	}
-
-	setCookieToken(w, token, expiresAt)
-	session.Token = token
-	return sessionItem, nil
-}
-
 func (s *Service[T]) RemoveExpired() error {
 	err := s.Db().Where("expires_at > ? AND expires_at < ?", time.Time{}, time.Now()).Delete(s.factory()).Error
 	return s.Error(err)
-}
-
-func (s *Service[T]) GetByToken(token string) (T, error) {
-	item := s.factory()
-	err := s.Db().Preload("User").First(item, "token = ?", hashToken(token)).Error
-	return item, s.Error(err)
 }
 
 func (s *Service[T]) RemoveByToken(token string) {

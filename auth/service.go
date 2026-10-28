@@ -80,7 +80,7 @@ func (s *Service[TUser, TSession]) Forgot() error {
 }
 
 func (s *Service[TUser, TSession]) Logout(w http.ResponseWriter, r *http.Request) error {
-	return s.sessions.Logout(w, r)
+	return s.sessions.RemoveCurrent(w, r)
 }
 
 func (s *Service[TUser, TSession]) Me(r *http.Request) (TUser, error) {
