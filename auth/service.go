@@ -56,7 +56,7 @@ func (s *Service[TUser, TSession]) Login(
 		return zeroUser, zeroSession, field, http.StatusUnauthorized, err
 	}
 
-	sessionItem, err := s.sessions.Login(w, user.GetModel().ID)
+	sessionItem, err := s.sessions.Create(w, user.GetModel().ID)
 	if err != nil {
 		return zeroUser, zeroSession, "login", http.StatusUnauthorized, err
 	}
