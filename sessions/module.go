@@ -43,11 +43,6 @@ func (m *Module[T]) CheckRequest(w http.ResponseWriter, r *http.Request) (contex
 	if err != nil {
 		return nil, err
 	}
-
-	ctx := r.Context()
-	if current != nil {
-		ctx = context.WithValue(ctx, contextKey{}, current)
-	}
-
+	ctx := context.WithValue(r.Context(), contextKey{}, current)
 	return ctx, nil
 }
