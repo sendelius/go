@@ -98,7 +98,7 @@ func (s *Service[T]) DeleteBulk(ids []string) (*BulkResult, error) {
 	}
 	tx := s.Db().Where("id IN ?", ids).Delete(&item)
 	if tx.Error != nil {
-		return result, s.Error(tx.Error).WithData(map[string]any{
+		return result, s.Error(tx.Error, map[string]any{
 			"deleted": result.Success,
 			"failed":  result.Failed,
 		})
@@ -310,23 +310,32 @@ func (s *Service[T]) GetList(request *ListRequest, conf *ListConfig) ([]T, int64
 	return items, total, pagination, nil
 }
 
-func (s *Service[T]) Error(err error) *apperrors.Error {
+func (s *Service[T]) Error(err error, data ...map[string]any) error {
 	if err == nil {
 		return nil
 	}
 
+	build := func(code string, message string) *apperrors.ErrorBuilder {
+		builder := apperrors.New(code, message)
+		if len(data) > 0 {
+			builder.Data(data[0])
+		}
+		return builder
+	}
+
 	pgErr, ok := errors.AsType[*pgconn.PgError](err)
 	if !ok {
-		return apperrors.New(ErrorUndefined, "внутренняя ошибка базы данных").Cause(err).Build()
+		return build(ErrorUndefined, "внутренняя ошибка базы данных").
+			Cause(err).
+			Build()
 	}
 
 	field := getFieldName(pgErr)
-
 	fieldErr := func(code string, msg string) *apperrors.Error {
 		if field != "" {
-			return apperrors.New(code, fmt.Sprintf("ошибка поля '%s': %s", field, msg)).Build()
+			msg = fmt.Sprintf("ошибка поля '%s': %s", field, msg)
 		}
-		return apperrors.New(code, msg).Build()
+		return build(code, msg).Build()
 	}
 
 	switch pgErr.Code {
@@ -339,7 +348,7 @@ func (s *Service[T]) Error(err error) *apperrors.Error {
 	case "23514":
 		return fieldErr(ErrorConstraintCheck, "значение не проходит проверку")
 	case "23P01":
-		return apperrors.New(ErrorConstraintExclusion, "нарушение ограничения исключения").Build()
+		return build(ErrorConstraintExclusion, "нарушение ограничения исключения").Build()
 	case "22001":
 		return fieldErr(ErrorValueTooLong, "слишком длинное значение")
 	case "22003":
@@ -351,30 +360,30 @@ func (s *Service[T]) Error(err error) *apperrors.Error {
 	case "22008":
 		return fieldErr(ErrorDatetimeOutOfRange, "некорректная дата или время")
 	case "22012":
-		return apperrors.New(ErrorDivisionByZero, "деление на ноль").Build()
+		return build(ErrorDivisionByZero, "деление на ноль").Build()
 	case "22004":
 		return fieldErr(ErrorNullNotAllowed, "недопустимое NULL-значение")
 	case "40001":
-		return apperrors.New(ErrorTransactionConflict, "конфликт транзакции, повторите попытку").Build()
+		return build(ErrorTransactionConflict, "конфликт транзакции, повторите попытку").Build()
 	case "40P01":
-		return apperrors.New(ErrorDeadlock, "взаимная блокировка транзакций, повторите попытку").Build()
+		return build(ErrorDeadlock, "взаимная блокировка транзакций, повторите попытку").Build()
 	case "42501":
-		return apperrors.New(ErrorInsufficientPrivilege, "недостаточно прав").Build()
+		return build(ErrorInsufficientPrivilege, "недостаточно прав").Build()
 	case "42P01":
-		return apperrors.New(ErrorTableNotFound, "таблица не существует").Build()
+		return build(ErrorTableNotFound, "таблица не существует").Build()
 	case "42703":
 		return fieldErr(ErrorColumnNotFound, "поле не существует")
 	case "42710":
-		return apperrors.New(ErrorObjectAlreadyExists, "объект уже существует").Build()
+		return build(ErrorObjectAlreadyExists, "объект уже существует").Build()
 	case "53300":
-		return apperrors.New(ErrorTooManyConnections, "слишком много подключений к базе данных").Build()
+		return build(ErrorTooManyConnections, "слишком много подключений к базе данных").Build()
 	case "55000":
-		return apperrors.New(ErrorInvalidTransactionState, "операция невозможна в текущем состоянии").Build()
+		return build(ErrorInvalidTransactionState, "операция невозможна в текущем состоянии").Build()
 	case "57014":
-		return apperrors.New(ErrorQueryCanceled, "запрос был отменен").Build()
+		return build(ErrorQueryCanceled, "запрос был отменен").Build()
 	case "08000", "08003", "08006":
-		return apperrors.New(ErrorConnection, "ошибка соединения с базой данных").Build()
+		return build(ErrorConnection, "ошибка соединения с базой данных").Build()
 	default:
-		return apperrors.New(ErrorUndefined, "внутренняя ошибка базы данных").Cause(pgErr).Build()
+		return build(ErrorUndefined, "внутренняя ошибка базы данных").Cause(pgErr).Build()
 	}
 }

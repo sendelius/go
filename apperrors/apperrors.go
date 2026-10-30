@@ -55,11 +55,6 @@ func (b *ErrorBuilder) Build() *Error {
 	return b.err
 }
 
-func (e *Error) WithData(data map[string]any) *Error {
-	e.Data = data
-	return e
-}
-
 func (e *Error) Error() string {
 	return e.Code + ": " + e.Message
 }

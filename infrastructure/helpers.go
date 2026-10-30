@@ -42,3 +42,11 @@ func uniqueIDs(ids []string) []string {
 	}
 	return unique
 }
+
+func getData(data []map[string]any) map[string]any {
+	if len(data) == 0 {
+		return nil
+	}
+
+	return data[0]
+}
