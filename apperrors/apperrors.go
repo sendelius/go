@@ -7,11 +7,12 @@ import (
 )
 
 type Error struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Field   string `json:"field,omitempty"`
-	Status  int    `json:"-"`
-	Cause   error  `json:"-"`
+	Code    string         `json:"code"`
+	Message string         `json:"message"`
+	Field   string         `json:"field,omitempty"`
+	Status  int            `json:"-"`
+	Cause   error          `json:"-"`
+	Data    map[string]any `json:"-"`
 }
 
 type ErrorBuilder struct {
@@ -42,6 +43,11 @@ func (b *ErrorBuilder) Field(field string) *ErrorBuilder {
 
 func (b *ErrorBuilder) Status(status int) *ErrorBuilder {
 	b.err.Status = status
+	return b
+}
+
+func (b *ErrorBuilder) Data(data map[string]any) *ErrorBuilder {
+	b.err.Data = data
 	return b
 }
 

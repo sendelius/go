@@ -25,19 +25,28 @@ func (h *Response) Success(w http.ResponseWriter, r *http.Request, data any, sta
 func (h *Response) Error(w http.ResponseWriter, r *http.Request, err error, status ...int) {
 	code := http.StatusInternalServerError
 
-	if appErr, ok := errors.AsType[*apperrors.Error](err); ok &&
-		appErr != nil && appErr.Status != 0 {
-		code = appErr.Status
+	res := map[string]any{
+		"status": "error",
+		"error":  prepareError(err),
+	}
+
+	if appErr, ok := errors.AsType[*apperrors.Error](err); ok && appErr != nil {
+		if appErr.Status != 0 {
+			code = appErr.Status
+		}
+
+		for key, value := range appErr.Data {
+			if key != "status" && key != "error" {
+				res[key] = value
+			}
+		}
 	}
 
 	if len(status) > 0 {
 		code = status[0]
 	}
 
-	h.writeResponse(w, r, map[string]any{
-		"status": "error",
-		"error":  prepareError(err),
-	}, code)
+	h.writeResponse(w, r, res, code)
 }
 
 func (h *Response) Sanitize(v any, hidden ...string) *orderedmap.OrderedMap {
