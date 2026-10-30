@@ -37,7 +37,7 @@ func (s *Service) PublicRoute(pattern string, handler http.HandlerFunc) {
 func (s *Service) ProtectedRoute(pattern string, handler http.HandlerFunc) {
 	s.mux.HandleFunc(pattern, withParams(pattern, func(w http.ResponseWriter, req *http.Request) {
 		if s.checkRequest == nil {
-			response.Error(w, req, apperrors.New(ErrorSessionCheckerInvalid, "проверка сессии не настроена"), http.StatusInternalServerError)
+			response.Error(w, req, apperrors.New(ErrorSessionCheckerInvalid, "проверка сессии не настроена").Build(), http.StatusInternalServerError)
 			return
 		}
 		ctx, err := s.checkRequest(w, req)
@@ -46,7 +46,7 @@ func (s *Service) ProtectedRoute(pattern string, handler http.HandlerFunc) {
 			return
 		}
 		if ctx == nil {
-			response.Error(w, req, apperrors.New(ErrorSessionInvalid, "требуется авторизация"), http.StatusUnauthorized)
+			response.Error(w, req, apperrors.New(ErrorSessionInvalid, "требуется авторизация").Build(), http.StatusUnauthorized)
 			return
 		}
 		handler.ServeHTTP(w, req.WithContext(ctx))

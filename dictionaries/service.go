@@ -21,7 +21,7 @@ func newService(root string) *Service {
 func Load[T any](s *Service, name string) (*Dictionary[T], error) {
 	parts := strings.Split(strings.Trim(name, `/\`), "/")
 	if len(parts) == 0 || parts[0] == "" {
-		return nil, apperrors.New(ErrorEmpty, "название словаря пустое")
+		return nil, apperrors.New(ErrorEmpty, "название словаря пустое").Build()
 	}
 
 	dir := filepath.Join(s.root, filepath.FromSlash(filepath.Join(parts[:len(parts)-1]...)))
@@ -32,7 +32,7 @@ func Load[T any](s *Service, name string) (*Dictionary[T], error) {
 		var err error
 		files, err = filepath.Glob(filepath.Join(dir, "*.json"))
 		if err != nil {
-			return nil, apperrors.New(ErrorSearchFiles, fmt.Sprintf("ошибка поиска файлов словаря %s", name), err)
+			return nil, apperrors.New(ErrorSearchFiles, fmt.Sprintf("ошибка поиска файлов словаря %s", name)).Cause(err).Build()
 		}
 	} else {
 		file := filepath.Join(dir, parts[len(parts)-1]+".json")
@@ -40,7 +40,7 @@ func Load[T any](s *Service, name string) (*Dictionary[T], error) {
 	}
 
 	if len(files) == 0 {
-		return nil, apperrors.New(ErrorJsonFiles, fmt.Sprintf("не найдены JSON-файлы словаря %s", name))
+		return nil, apperrors.New(ErrorJsonFiles, fmt.Sprintf("не найдены JSON-файлы словаря %s", name)).Build()
 	}
 
 	var (
@@ -52,12 +52,12 @@ func Load[T any](s *Service, name string) (*Dictionary[T], error) {
 	for _, path := range files {
 		response, err := os.ReadFile(path)
 		if err != nil {
-			return nil, apperrors.New(ErrorReadFile, fmt.Sprintf("ошибка загрузки файла словаря %s", path), err)
+			return nil, apperrors.New(ErrorReadFile, fmt.Sprintf("ошибка загрузки файла словаря %s", path)).Cause(err).Build()
 		}
 
 		var dictionary Dictionary[T]
 		if err = json.Unmarshal(response, &dictionary); err != nil {
-			return nil, apperrors.New(ErrorUnmarshalFile, fmt.Sprintf("ошибка разбора файла словаря %s", path), err)
+			return nil, apperrors.New(ErrorUnmarshalFile, fmt.Sprintf("ошибка разбора файла словаря %s", path)).Cause(err).Build()
 		}
 
 		if title == "" {
@@ -65,10 +65,10 @@ func Load[T any](s *Service, name string) (*Dictionary[T], error) {
 			version = dictionary.Version
 		} else {
 			if dictionary.Title != title {
-				return nil, apperrors.New(ErrorTitle, fmt.Sprintf("ошибка словаря %s: несоответствие заголовка в %s", name, path))
+				return nil, apperrors.New(ErrorTitle, fmt.Sprintf("ошибка словаря %s: несоответствие заголовка в %s", name, path)).Build()
 			}
 			if dictionary.Version != version {
-				return nil, apperrors.New(ErrorVersion, fmt.Sprintf("ошибка словаря %s: несоответствие версий в %s", name, path))
+				return nil, apperrors.New(ErrorVersion, fmt.Sprintf("ошибка словаря %s: несоответствие версий в %s", name, path)).Build()
 			}
 		}
 

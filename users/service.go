@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"math/big"
+	"net/http"
 	"strings"
 
 	"github.com/sendelius/go/apperrors"
@@ -24,8 +25,8 @@ type Accessor interface {
 type ServiceInterface[T Accessor] interface {
 	NewModel() T
 	GetByLogin(login string) (T, error)
-	Check(login, password string) (T, string, error)
-	Create(item T) (T, string, error)
+	Check(login, password string) (T, error)
+	Create(item T) (T, error)
 	GetByID(id string) (T, error)
 	HashPassword(password string) string
 	CheckPassword(hash, password string) bool
@@ -55,28 +56,37 @@ func (s *Service[T]) GetByLogin(login string) (T, error) {
 	return item, s.Error(err)
 }
 
-func (s *Service[T]) Check(login string, password string) (T, string, error) {
+func (s *Service[T]) Check(login string, password string) (T, error) {
 	userItem, err := s.GetByLogin(login)
 	if err != nil {
 		var zero T
-		return zero, "login", apperrors.New(ErrorNotFound, "пользователь не найден")
+		return zero, apperrors.New(ErrorNotFound, "пользователь не найден").
+			Field("login").
+			Status(http.StatusUnauthorized).
+			Build()
 	}
 
 	user := userItem.GetModel()
 	if user.Status != "public" {
 		var zero T
-		return zero, "login", apperrors.New(ErrorNotActive, "пользователь не активирован, ожидайте решения администрации")
+		return zero, apperrors.New(ErrorNotActive, "пользователь не активирован, ожидайте решения администрации").
+			Field("login").
+			Status(http.StatusUnauthorized).
+			Build()
 	}
 
 	if !s.CheckPassword(user.Password, password) {
 		var zero T
-		return zero, "password", apperrors.New(ErrorPasswordInvalid, "неверный пароль")
+		return zero, apperrors.New(ErrorPasswordInvalid, "неверный пароль").
+			Field("password").
+			Status(http.StatusUnauthorized).
+			Build()
 	}
 
-	return userItem, "", nil
+	return userItem, nil
 }
 
-func (s *Service[T]) Create(item T) (T, string, error) {
+func (s *Service[T]) Create(item T) (T, error) {
 	var zero T
 	model := item.GetModel()
 
@@ -92,28 +102,45 @@ func (s *Service[T]) Create(item T) (T, string, error) {
 		err := s.Db().First(&model, "email = ?", model.Email).Error
 		if err == nil {
 			if model.Status != "public" {
-				return zero, "email", apperrors.New(ErrorCreateAlreadySubmitted, "по указанному email уже оформлена заявка на регистрацию")
+				return zero, apperrors.New(ErrorCreateAlreadySubmitted, "по указанному email уже оформлена заявка на регистрацию").
+					Cause(err).
+					Field("email").
+					Build()
 			}
-			return zero, "email", apperrors.New(ErrorCreateAlreadyRegistration, "по указанному email уже зарегистрирован пользователь")
+			return zero, apperrors.New(ErrorCreateAlreadyRegistration, "по указанному email уже зарегистрирован пользователь").
+				Cause(err).
+				Field("email").
+				Build()
 		}
 	} else {
-		return zero, "email", apperrors.New(ErrorCreateEmailRequired, "поле email обязательно для заполнения")
+		return zero, apperrors.New(ErrorCreateEmailRequired, "поле email обязательно для заполнения").
+			Field("email").
+			Build()
 	}
 
 	if len(model.Phone) > 0 {
 		err := s.Db().First(&model, "phone = ?", model.Phone).Error
 		if err == nil {
 			if model.Status != "public" {
-				return zero, "phone", apperrors.New(ErrorCreateAlreadySubmitted, "по указанному телефону уже оформлена заявка на регистрацию")
+				return zero, apperrors.New(ErrorCreateAlreadySubmitted, "по указанному телефону уже оформлена заявка на регистрацию").
+					Cause(err).
+					Field("phone").
+					Build()
 			}
-			return zero, "phone", apperrors.New(ErrorCreateAlreadyRegistration, "по указанному телефону уже зарегистрирован пользователь")
+			return zero, apperrors.New(ErrorCreateAlreadyRegistration, "по указанному телефону уже зарегистрирован пользователь").
+				Cause(err).
+				Field("phone").
+				Build()
 		}
 	}
 
 	if err := s.Db().Create(item).Error; err != nil {
-		return zero, "name", apperrors.New(ErrorCreate, "ошибка сохранения пользователя", err)
+		return zero, apperrors.New(ErrorCreate, "ошибка сохранения пользователя").
+			Cause(err).
+			Field("name").
+			Build()
 	}
-	return item, "", nil
+	return item, nil
 }
 
 func (s *Service[T]) HashPassword(password string) string {

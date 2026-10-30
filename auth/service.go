@@ -42,36 +42,39 @@ func (s *Service[TUser, TSession]) Login(
 	r *http.Request,
 	login string,
 	password string,
-) (TUser, TSession, string, int, error) {
+) (TUser, TSession, error) {
 	var zeroUser TUser
 	var zeroSession TSession
 
 	_, err := s.sessions.Check(w, r)
 	if err == nil {
-		return zeroUser, zeroSession, "login", http.StatusBadRequest, apperrors.New(ErrorLoginAlready, "вы уже авторизованы")
+		return zeroUser, zeroSession, apperrors.New(ErrorLoginAlready, "вы уже авторизованы").
+			Field("login").
+			Status(http.StatusBadRequest).
+			Build()
 	}
 
-	user, field, err := s.users.Check(login, password)
+	user, err := s.users.Check(login, password)
 	if err != nil {
-		return zeroUser, zeroSession, field, http.StatusUnauthorized, err
+		return zeroUser, zeroSession, err
 	}
 
 	sessionItem, err := s.sessions.Create(w, user.GetModel().ID)
 	if err != nil {
-		return zeroUser, zeroSession, "login", http.StatusUnauthorized, err
+		return zeroUser, zeroSession, err
 	}
 
-	return user, sessionItem, "", http.StatusOK, nil
+	return user, sessionItem, nil
 }
 
-func (s *Service[TUser, TSession]) Register(user TUser) (string, error) {
-	_, field, err := s.users.Create(user)
+func (s *Service[TUser, TSession]) Register(user TUser) error {
+	_, err := s.users.Create(user)
 	if err != nil {
-		return field, err
+		return err
 	}
 
 	// TODO: отправка письма о регистрации
-	return "", nil
+	return nil
 }
 
 func (s *Service[TUser, TSession]) Forgot() error {
@@ -88,13 +91,13 @@ func (s *Service[TUser, TSession]) Me(r *http.Request) (TUser, error) {
 
 	current, ok := sessions.FromContext(r.Context())
 	if !ok {
-		return zero, apperrors.New(ErrorSessionNotFound, "сессия не найдена")
+		return zero, apperrors.New(ErrorSessionNotFound, "сессия не найдена").Build()
 	}
 
 	currentSession := current.GetModel()
 	user, err := s.users.GetByID(currentSession.UserID)
 	if err != nil {
-		return zero, apperrors.New(ErrorUserNotFound, "пользователь не найден", err)
+		return zero, apperrors.New(ErrorUserNotFound, "пользователь не найден").Cause(err).Build()
 	}
 
 	return user, nil

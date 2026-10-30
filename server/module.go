@@ -36,7 +36,7 @@ func New(
 func (m *Module) Start() {
 	// 404 ошибка
 	m.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		response.Error(w, r, apperrors.New(ErrorNotFound, "метод не найден"), http.StatusNotFound)
+		response.Error(w, r, apperrors.New(ErrorNotFound, "метод не найден").Build(), http.StatusNotFound)
 	})
 
 	h := &http.Server{

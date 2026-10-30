@@ -41,7 +41,7 @@ func (s *Service[T]) DeleteByID(id string) error {
 	}
 
 	if tx.RowsAffected == 0 {
-		return apperrors.New(ErrorDelete, "запись не найдена")
+		return apperrors.New(ErrorDelete, "запись не найдена").Build()
 	}
 
 	return nil
@@ -52,7 +52,7 @@ func (s *Service[T]) CloneByID(id string) error {
 
 	if err := s.Db().First(&item, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return apperrors.New(ErrorCloneNotFound, "запись не найдена", err)
+			return apperrors.New(ErrorCloneNotFound, "запись не найдена").Cause(err).Build()
 		}
 		return s.Error(err)
 	}
@@ -63,7 +63,7 @@ func (s *Service[T]) CloneByID(id string) error {
 	switch value.Kind() {
 	case reflect.Pointer:
 		if value.IsNil() || value.Elem().Kind() != reflect.Struct {
-			return apperrors.New(ErrorCloneTypes, "тип записи для клонирования должен быть структурой")
+			return apperrors.New(ErrorCloneTypes, "тип записи для клонирования должен быть структурой").Build()
 		}
 
 		cloneValue := reflect.New(value.Elem().Type())
@@ -78,7 +78,7 @@ func (s *Service[T]) CloneByID(id string) error {
 		clone = cloneValue.Interface()
 
 	default:
-		return apperrors.New(ErrorCloneTypes, "тип записи для клонирования должен быть структурой")
+		return apperrors.New(ErrorCloneTypes, "тип записи для клонирования должен быть структурой").Build()
 	}
 
 	if err := s.Db().Create(clone).Error; err != nil {
@@ -109,7 +109,7 @@ func (s *Service[T]) DeleteBulk(ids []string) (*BulkResult, error) {
 		return &BulkResult{
 			Success: tx.RowsAffected,
 			Failed:  failed,
-		}, apperrors.New(ErrorDeleteBulk, message)
+		}, apperrors.New(ErrorDeleteBulk, message).Build()
 	}
 
 	return &BulkResult{
@@ -141,7 +141,7 @@ func (s *Service[T]) CloneBulk(ids []string) (*BulkResult, error) {
 		return &BulkResult{
 			Success: success,
 			Failed:  failed,
-		}, apperrors.New(ErrorCloneBulk, message)
+		}, apperrors.New(ErrorCloneBulk, message).Build()
 	}
 
 	return &BulkResult{
@@ -316,16 +316,16 @@ func (s *Service[T]) Error(err error) error {
 
 	pgErr, ok := errors.AsType[*pgconn.PgError](err)
 	if !ok {
-		return apperrors.New(ErrorUndefined, "внутренняя ошибка базы данных", err)
+		return apperrors.New(ErrorUndefined, "внутренняя ошибка базы данных").Cause(err).Build()
 	}
 
 	field := getFieldName(pgErr)
 
 	fieldErr := func(code string, msg string) error {
 		if field != "" {
-			return apperrors.New(code, fmt.Sprintf("ошибка поля '%s': %s", field, msg))
+			return apperrors.New(code, fmt.Sprintf("ошибка поля '%s': %s", field, msg)).Build()
 		}
-		return apperrors.New(code, msg)
+		return apperrors.New(code, msg).Build()
 	}
 
 	switch pgErr.Code {
@@ -338,7 +338,7 @@ func (s *Service[T]) Error(err error) error {
 	case "23514":
 		return fieldErr(ErrorConstraintCheck, "значение не проходит проверку")
 	case "23P01":
-		return apperrors.New(ErrorConstraintExclusion, "нарушение ограничения исключения")
+		return apperrors.New(ErrorConstraintExclusion, "нарушение ограничения исключения").Build()
 	case "22001":
 		return fieldErr(ErrorValueTooLong, "слишком длинное значение")
 	case "22003":
@@ -350,30 +350,30 @@ func (s *Service[T]) Error(err error) error {
 	case "22008":
 		return fieldErr(ErrorDatetimeOutOfRange, "некорректная дата или время")
 	case "22012":
-		return apperrors.New(ErrorDivisionByZero, "деление на ноль")
+		return apperrors.New(ErrorDivisionByZero, "деление на ноль").Build()
 	case "22004":
 		return fieldErr(ErrorNullNotAllowed, "недопустимое NULL-значение")
 	case "40001":
-		return apperrors.New(ErrorTransactionConflict, "конфликт транзакции, повторите попытку")
+		return apperrors.New(ErrorTransactionConflict, "конфликт транзакции, повторите попытку").Build()
 	case "40P01":
-		return apperrors.New(ErrorDeadlock, "взаимная блокировка транзакций, повторите попытку")
+		return apperrors.New(ErrorDeadlock, "взаимная блокировка транзакций, повторите попытку").Build()
 	case "42501":
-		return apperrors.New(ErrorInsufficientPrivilege, "недостаточно прав")
+		return apperrors.New(ErrorInsufficientPrivilege, "недостаточно прав").Build()
 	case "42P01":
-		return apperrors.New(ErrorTableNotFound, "таблица не существует")
+		return apperrors.New(ErrorTableNotFound, "таблица не существует").Build()
 	case "42703":
 		return fieldErr(ErrorColumnNotFound, "поле не существует")
 	case "42710":
-		return apperrors.New(ErrorObjectAlreadyExists, "объект уже существует")
+		return apperrors.New(ErrorObjectAlreadyExists, "объект уже существует").Build()
 	case "53300":
-		return apperrors.New(ErrorTooManyConnections, "слишком много подключений к базе данных")
+		return apperrors.New(ErrorTooManyConnections, "слишком много подключений к базе данных").Build()
 	case "55000":
-		return apperrors.New(ErrorInvalidTransactionState, "операция невозможна в текущем состоянии")
+		return apperrors.New(ErrorInvalidTransactionState, "операция невозможна в текущем состоянии").Build()
 	case "57014":
-		return apperrors.New(ErrorQueryCanceled, "запрос был отменен")
+		return apperrors.New(ErrorQueryCanceled, "запрос был отменен").Build()
 	case "08000", "08003", "08006":
-		return apperrors.New(ErrorConnection, "ошибка соединения с базой данных")
+		return apperrors.New(ErrorConnection, "ошибка соединения с базой данных").Build()
 	default:
-		return apperrors.New(ErrorUndefined, "внутренняя ошибка базы данных", pgErr)
+		return apperrors.New(ErrorUndefined, "внутренняя ошибка базы данных").Cause(pgErr).Build()
 	}
 }

@@ -2,11 +2,13 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/schema"
 	"github.com/iancoleman/orderedmap"
+	"github.com/sendelius/go/apperrors"
 	"github.com/sendelius/go/env"
 )
 
@@ -20,8 +22,14 @@ func (h *Response) Success(w http.ResponseWriter, r *http.Request, data any, sta
 	h.writeResponse(w, r, data, status...)
 }
 
-func (h *Response) Error(w http.ResponseWriter, r *http.Request, err any, status ...int) {
+func (h *Response) Error(w http.ResponseWriter, r *http.Request, err error, status ...int) {
 	code := http.StatusInternalServerError
+
+	if appErr, ok := errors.AsType[*apperrors.Error](err); ok &&
+		appErr != nil && appErr.Status != 0 {
+		code = appErr.Status
+	}
+
 	if len(status) > 0 {
 		code = status[0]
 	}
@@ -30,38 +38,6 @@ func (h *Response) Error(w http.ResponseWriter, r *http.Request, err any, status
 		"status": "error",
 		"error":  prepareError(err),
 	}, code)
-}
-
-func (h *Response) ErrorWithField(w http.ResponseWriter, r *http.Request, err any, field string, status ...int) {
-	code := http.StatusInternalServerError
-	if len(status) > 0 {
-		code = status[0]
-	}
-
-	h.writeResponse(w, r, map[string]any{
-		"status": "error",
-		"error":  prepareError(err),
-		"field":  field,
-	}, code)
-}
-
-func (h *Response) ErrorWithData(w http.ResponseWriter, r *http.Request, err any, data map[string]any, status ...int) {
-	code := http.StatusInternalServerError
-	if len(status) > 0 {
-		code = status[0]
-	}
-
-	res := map[string]any{
-		"status": "error",
-		"error":  prepareError(err),
-	}
-	for key, value := range data {
-		if key != "status" && key != "error" {
-			res[key] = value
-		}
-	}
-
-	h.writeResponse(w, r, res, code)
 }
 
 func (h *Response) Sanitize(v any, hidden ...string) *orderedmap.OrderedMap {

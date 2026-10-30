@@ -16,13 +16,13 @@ func withParams(pattern string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		method, path := splitPattern(pattern)
 		if req.Method != method {
-			response.Error(w, req, apperrors.New(ErrorMethodNotAllowed, "метод не доступен"), http.StatusMethodNotAllowed)
+			response.Error(w, req, apperrors.New(ErrorMethodNotAllowed, "метод не доступен").Build(), http.StatusMethodNotAllowed)
 			return
 		}
 
 		params := parsePattern(path, req.URL.Path)
 		if params == nil {
-			response.Error(w, req, apperrors.New(ErrorNotFound, "метод не найден"), http.StatusNotFound)
+			response.Error(w, req, apperrors.New(ErrorNotFound, "метод не найден").Build(), http.StatusNotFound)
 			return
 		}
 
@@ -78,14 +78,14 @@ func prepareError(err any) *apperrors.Error {
 	var appErr *apperrors.Error
 	switch e := err.(type) {
 	case string:
-		appErr = apperrors.New(ErrorUndefined, e)
+		appErr = apperrors.New(ErrorUndefined, e).Build()
 	case error:
 		if errors.As(e, &appErr) {
 			return appErr
 		}
-		appErr = apperrors.New(ErrorUndefined, "внутренняя ошибка сервера", e)
+		appErr = apperrors.New(ErrorUndefined, "внутренняя ошибка сервера").Cause(e).Build()
 	default:
-		appErr = apperrors.New(ErrorUndefined, "неизвестная ошибка")
+		appErr = apperrors.New(ErrorUndefined, "неизвестная ошибка").Build()
 	}
 	return appErr
 }

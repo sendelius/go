@@ -27,16 +27,16 @@ func newService(redis *redis.Service) *Service {
 func (s *Service) Create() (map[string]any, error) {
 	id, err := randomString(16)
 	if err != nil {
-		return nil, apperrors.New(ErrorChallengeCreate, "не удалось создать captcha")
+		return nil, apperrors.New(ErrorChallengeCreate, "не удалось создать captcha").Cause(err).Build()
 	}
 
 	challenge, err := randomString(32)
 	if err != nil {
-		return nil, apperrors.New(ErrorChallengeCreate, "не удалось создать captcha")
+		return nil, apperrors.New(ErrorChallengeCreate, "не удалось создать captcha").Cause(err).Build()
 	}
 
 	if err := s.redis.Set(ChallengePrefix+id, challenge, ChallengeTTL); err != nil {
-		return nil, apperrors.New(ErrorChallengeCreate, "не удалось создать captcha")
+		return nil, apperrors.New(ErrorChallengeCreate, "не удалось создать captcha").Build()
 	}
 
 	return map[string]any{
@@ -49,27 +49,27 @@ func (s *Service) Verify(id string, nonce uint64) (string, error) {
 	id = strings.TrimSpace(id)
 
 	if id == "" {
-		return "", apperrors.New(ErrorVerifyNotFound, "captcha challenge не найден")
+		return "", apperrors.New(ErrorVerifyNotFound, "captcha challenge не найден").Build()
 	}
 
 	challenge, err := s.redis.GetAndDelete(ChallengePrefix + id)
 	if err != nil {
-		return "", apperrors.New(ErrorVerifyNotFound, "captcha challenge не найден")
+		return "", apperrors.New(ErrorVerifyNotFound, "captcha challenge не найден").Cause(err).Build()
 	}
 
 	hash := calculateHash(challenge, nonce)
 
 	if !strings.HasPrefix(hash, strings.Repeat("0", 4)) {
-		return "", apperrors.New(ErrorVerifyInvalid, "неверное решение captcha")
+		return "", apperrors.New(ErrorVerifyInvalid, "неверное решение captcha").Build()
 	}
 
 	token, err := randomString(32)
 	if err != nil {
-		return "", apperrors.New(ErrorVerifyCheck, "не удалось проверить captcha")
+		return "", apperrors.New(ErrorVerifyCheck, "не удалось проверить captcha").Cause(err).Build()
 	}
 
 	if err := s.redis.Set(TokenPrefix+token, "1", ChallengeTTL); err != nil {
-		return "", apperrors.New(ErrorVerifyCheck, "не удалось проверить captcha")
+		return "", apperrors.New(ErrorVerifyCheck, "не удалось проверить captcha").Cause(err).Build()
 	}
 
 	return token, nil
@@ -79,12 +79,12 @@ func (s *Service) Consume(token string) error {
 	token = strings.TrimSpace(token)
 
 	if token == "" {
-		return apperrors.New(ErrorConsumeCheck, "проверка captcha не пройдена, обновите страницу и попробуйте снова")
+		return apperrors.New(ErrorConsumeCheck, "проверка captcha не пройдена, обновите страницу и попробуйте снова").Build()
 	}
 
 	_, err := s.redis.GetAndDelete(TokenPrefix + token)
 	if err != nil {
-		return apperrors.New(ErrorConsumeCheck, "проверка captcha не пройдена, обновите страницу и попробуйте снова")
+		return apperrors.New(ErrorConsumeCheck, "проверка captcha не пройдена, обновите страницу и попробуйте снова").Cause(err).Build()
 	}
 
 	return nil

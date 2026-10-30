@@ -46,9 +46,9 @@ func (h *Handler[TUser, TSession]) Login(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	_, session, field, status, err := h.auth.Login(w, r, request.Login, request.Password)
+	_, session, err := h.auth.Login(w, r, request.Login, request.Password)
 	if err != nil {
-		h.Response.ErrorWithField(w, r, err, field, status)
+		h.Response.Error(w, r, err)
 		return
 	}
 
@@ -80,9 +80,9 @@ func (h *Handler[TUser, TSession]) Register(w http.ResponseWriter, r *http.Reque
 	model.Email = request.Email
 	model.Phone = request.Phone
 
-	field, err := h.auth.Register(user)
+	err := h.auth.Register(user)
 	if err != nil {
-		h.Response.ErrorWithField(w, r, err, field)
+		h.Response.Error(w, r, err)
 		return
 	}
 

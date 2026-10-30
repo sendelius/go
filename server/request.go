@@ -48,19 +48,19 @@ func (h *Request) Validate(w http.ResponseWriter, r *http.Request, dst any) bool
 		var se *json.SyntaxError
 		switch {
 		case errors.As(err, &ute):
-			response.Error(w, r, apperrors.New(ErrorRequestTypeInvalid, fmt.Sprintf("поле '%s' имеет неверный тип, ожидается %s", ute.Field, humanType(ute.Type)), err), http.StatusBadRequest)
+			response.Error(w, r, apperrors.New(ErrorRequestTypeInvalid, fmt.Sprintf("поле '%s' имеет неверный тип, ожидается %s", ute.Field, humanType(ute.Type))).Cause(err).Build(), http.StatusBadRequest)
 		case errors.As(err, &se):
-			response.Error(w, r, apperrors.New(ErrorRequestJsonInvalid, "некорректный JSON в теле запроса", err), http.StatusBadRequest)
+			response.Error(w, r, apperrors.New(ErrorRequestJsonInvalid, "некорректный JSON в теле запроса").Cause(err).Build(), http.StatusBadRequest)
 		case errors.Is(err, io.EOF):
-			response.Error(w, r, apperrors.New(ErrorRequestEmptyBody, "тело запроса пустое", err), http.StatusBadRequest)
+			response.Error(w, r, apperrors.New(ErrorRequestEmptyBody, "тело запроса пустое").Cause(err).Build(), http.StatusBadRequest)
 		default:
-			response.Error(w, r, apperrors.New(ErrorRequestBodyInvalid, "не удалось обработать тело запроса", err), http.StatusBadRequest)
+			response.Error(w, r, apperrors.New(ErrorRequestBodyInvalid, "не удалось обработать тело запроса").Cause(err).Build(), http.StatusBadRequest)
 		}
 		return false
 	}
 
 	if err = validate.Struct(dst); err != nil {
-		response.Error(w, r, apperrors.New(ErrorRequestValidation, formatValidationError(err).Error(), err), http.StatusBadRequest)
+		response.Error(w, r, apperrors.New(ErrorRequestValidation, formatValidationError(err).Error()).Cause(err).Build(), http.StatusBadRequest)
 		return false
 	}
 
