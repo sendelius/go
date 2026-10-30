@@ -88,6 +88,8 @@ func (h *Handler[TUser, TSession]) Register(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	h.captcha.Delete(request.Captcha)
+
 	h.Response.Success(w, r, nil, http.StatusCreated)
 }
 
@@ -109,6 +111,8 @@ func (h *Handler[TUser, TSession]) Forgot(w http.ResponseWriter, r *http.Request
 		h.Response.Error(w, r, err)
 		return
 	}
+
+	h.captcha.Delete(request.Captcha)
 
 	h.Response.Success(w, r, nil)
 }
