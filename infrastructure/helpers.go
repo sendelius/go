@@ -29,3 +29,16 @@ func resetCloneFields(value reflect.Value) {
 		}
 	}
 }
+
+func uniqueIDs(ids []string) []string {
+	unique := make([]string, 0, len(ids))
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if _, exists := seen[id]; exists {
+			continue
+		}
+		seen[id] = struct{}{}
+		unique = append(unique, id)
+	}
+	return unique
+}

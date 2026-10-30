@@ -89,65 +89,66 @@ func (s *Service[T]) CloneByID(id string) error {
 }
 
 func (s *Service[T]) DeleteBulk(ids []string) (*BulkResult, error) {
+	ids = uniqueIDs(ids)
 	var item T
 
+	result := &BulkResult{
+		Success: 0,
+		Failed:  int64(len(ids)),
+	}
 	tx := s.Db().Where("id IN ?", ids).Delete(&item)
-
 	if tx.Error != nil {
-		return &BulkResult{
-			Success: 0,
-			Failed:  int64(len(ids)),
-		}, s.Error(tx.Error)
+		return result, s.Error(tx.Error).WithData(map[string]any{
+			"deleted": result.Success,
+			"failed":  result.Failed,
+		})
 	}
 
-	failed := int64(len(ids)) - tx.RowsAffected
-	if failed > 0 {
+	result.Success = tx.RowsAffected
+	result.Failed = int64(len(ids)) - tx.RowsAffected
+	if result.Failed > 0 {
 		message := "не удалось удалить записи"
-		if tx.RowsAffected > 0 {
+		if result.Success > 0 {
 			message = "некоторые записи не удалось удалить"
 		}
-		return &BulkResult{
-			Success: tx.RowsAffected,
-			Failed:  failed,
-		}, apperrors.New(ErrorDeleteBulk, message).Build()
+		return result, apperrors.New(ErrorDeleteBulk, message).Data(map[string]any{
+			"deleted": result.Success,
+			"failed":  result.Failed,
+		}).Build()
 	}
 
-	return &BulkResult{
-		Success: tx.RowsAffected,
-		Failed:  failed,
-	}, nil
+	return result, nil
 }
 
 func (s *Service[T]) CloneBulk(ids []string) (*BulkResult, error) {
-	var (
-		success int64
-		failed  int64
-	)
+	ids = uniqueIDs(ids)
+
+	result := &BulkResult{
+		Success: 0,
+		Failed:  0,
+	}
 
 	for _, id := range ids {
 		if err := s.CloneByID(id); err != nil {
-			failed++
+			result.Failed++
 			continue
 		}
-		success++
+		result.Success++
 	}
 
-	if failed > 0 {
+	if result.Failed > 0 {
 		message := "не удалось клонировать записи"
-		if success > 0 {
+		if result.Success > 0 {
 			message = "некоторые записи не удалось клонировать"
 		}
 
-		return &BulkResult{
-			Success: success,
-			Failed:  failed,
-		}, apperrors.New(ErrorCloneBulk, message).Build()
+		return result, apperrors.New(ErrorCloneBulk, message).Data(map[string]any{
+			"cloned": result.Success,
+			"failed": result.Failed,
+		}).Build()
 	}
 
-	return &BulkResult{
-		Success: success,
-		Failed:  failed,
-	}, nil
+	return result, nil
 }
 
 func (s *Service[T]) GetListRequest() *ListRequest {
@@ -309,7 +310,7 @@ func (s *Service[T]) GetList(request *ListRequest, conf *ListConfig) ([]T, int64
 	return items, total, pagination, nil
 }
 
-func (s *Service[T]) Error(err error) error {
+func (s *Service[T]) Error(err error) *apperrors.Error {
 	if err == nil {
 		return nil
 	}
@@ -321,7 +322,7 @@ func (s *Service[T]) Error(err error) error {
 
 	field := getFieldName(pgErr)
 
-	fieldErr := func(code string, msg string) error {
+	fieldErr := func(code string, msg string) *apperrors.Error {
 		if field != "" {
 			return apperrors.New(code, fmt.Sprintf("ошибка поля '%s': %s", field, msg)).Build()
 		}

@@ -30,7 +30,7 @@ func New(code string, message string) *ErrorBuilder {
 
 func (b *ErrorBuilder) Cause(cause error) *ErrorBuilder {
 	b.err.Cause = cause
-	if env.Bool("DEV_MODE") {
+	if cause != nil && env.Bool("DEV_MODE") {
 		log.Printf("%s; причина: %+v", b.err.Error(), b.err.Cause)
 	}
 	return b
@@ -53,6 +53,11 @@ func (b *ErrorBuilder) Data(data map[string]any) *ErrorBuilder {
 
 func (b *ErrorBuilder) Build() *Error {
 	return b.err
+}
+
+func (e *Error) WithData(data map[string]any) *Error {
+	e.Data = data
+	return e
 }
 
 func (e *Error) Error() string {
