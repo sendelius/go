@@ -52,6 +52,8 @@ func (h *Handler[TUser, TSession]) Login(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	h.captcha.Delete(request.Captcha)
+
 	h.Response.Success(w, r, map[string]string{
 		"token": session.GetModel().Token,
 	})

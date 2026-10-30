@@ -82,7 +82,7 @@ func (s *Service) Consume(token string) error {
 		return apperrors.New(ErrorConsumeCheck, "проверка captcha не пройдена, обновите страницу и попробуйте снова").Build()
 	}
 
-	_, err := s.redis.GetAndDelete(TokenPrefix + token)
+	_, err := s.redis.Get(TokenPrefix + token)
 	if err != nil {
 		return apperrors.New(ErrorConsumeCheck, "проверка captcha не пройдена, обновите страницу и попробуйте снова").Cause(err).Build()
 	}
