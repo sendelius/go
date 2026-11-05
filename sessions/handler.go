@@ -44,7 +44,7 @@ func (h *Handler[T]) GetList(w http.ResponseWriter, r *http.Request) {
 	request.SetFilter("user_id", request.UserID)
 
 	sessions, total, pagination, err := h.sessions.GetList(request.ListRequest, &infrastructure.ListConfig{
-		FilterFields: []string{"is_bearer"},
+		FilterFields: []string{"is_bearer", "user_id"},
 		SortFields:   []string{"id", "created_at", "updated_at", "token", "comment", "expires_at"},
 	})
 	if err != nil {
