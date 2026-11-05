@@ -3,11 +3,11 @@ module github.com/sendelius/go
 go 1.27.3
 
 require (
-	github.com/go-playground/validator/v10 v10.30.5
+	github.com/go-playground/validator/v10 v10.30.6
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/schema v1.4.1
 	github.com/iancoleman/orderedmap v0.3.0
-	github.com/jackc/pgx/v5 v5.11.0
+	github.com/jackc/pgx/v5 v5.12.0
 	github.com/redis/go-redis/v9 v9.23.0
 	golang.org/x/crypto v0.58.0
 	gorm.io/driver/postgres v1.6.3

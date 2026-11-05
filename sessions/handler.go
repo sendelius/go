@@ -24,15 +24,13 @@ func newHandler[
 }
 
 func (h *Handler[T]) GetList(w http.ResponseWriter, r *http.Request) {
-	request := new(struct {
+	request := struct {
 		UserID string `json:"user_id" validate:"omitempty"`
-	})
-	if !h.Request.Validate(w, r, request) {
-		return
+		*infrastructure.ListRequest
+	}{
+		ListRequest: h.sessions.GetListRequest(),
 	}
-
-	requestList := h.sessions.GetListRequest()
-	if !h.Request.Validate(w, r, requestList) {
+	if !h.Request.Validate(w, r, &request) {
 		return
 	}
 
@@ -42,9 +40,10 @@ func (h *Handler[T]) GetList(w http.ResponseWriter, r *http.Request) {
 			request.UserID = current.GetModel().UserID
 		}
 	}
-	requestList.SetFilter("user_id", request.UserID)
 
-	sessions, total, pagination, err := h.sessions.GetList(requestList, &infrastructure.ListConfig{
+	request.SetFilter("user_id", request.UserID)
+
+	sessions, total, pagination, err := h.sessions.GetList(request.ListRequest, &infrastructure.ListConfig{
 		FilterFields: []string{"is_bearer"},
 		SortFields:   []string{"id", "created_at", "updated_at", "token", "comment", "expires_at"},
 	})

@@ -14,7 +14,11 @@ import (
 )
 
 var validate = validator.New()
-var queryDecoder = schema.NewDecoder()
+var queryDecoder = func() *schema.Decoder {
+	decoder := schema.NewDecoder()
+	decoder.SetAliasTag("json")
+	return decoder
+}()
 
 type contextKey struct{}
 
