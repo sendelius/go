@@ -49,17 +49,40 @@ func (h *Response) Error(w http.ResponseWriter, r *http.Request, err error, stat
 	h.writeResponse(w, r, res, code)
 }
 
-func (h *Response) Sanitize(v any, hidden ...string) *orderedmap.OrderedMap {
+func (h *Response) Sanitize(v any, hidden ...string) any {
 	b, _ := json.Marshal(v)
 
-	m := orderedmap.New()
-	_ = json.Unmarshal(b, &m)
-
-	for _, field := range hidden {
-		m.Delete(field)
+	var data any
+	_ = json.Unmarshal(b, &data)
+	remove := func(m map[string]any) {
+		for _, field := range hidden {
+			delete(m, field)
+		}
 	}
 
-	return m
+	switch value := v.(type) {
+	case *orderedmap.OrderedMap:
+		for _, field := range hidden {
+			value.Delete(field)
+		}
+		return value
+	case []any:
+		// Обработка ниже через JSON
+	case nil:
+		return nil
+	}
+
+	switch value := data.(type) {
+	case map[string]any:
+		remove(value)
+	case []any:
+		for _, item := range value {
+			if m, ok := item.(map[string]any); ok {
+				remove(m)
+			}
+		}
+	}
+	return data
 }
 
 func (h *Response) writeResponse(w http.ResponseWriter, r *http.Request, data any, status ...int) {

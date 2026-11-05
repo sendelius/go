@@ -54,7 +54,7 @@ func (h *Handler[T]) GetList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.Response.Success(w, r, map[string]any{
-		"sessions":   sessions,
+		"sessions":   h.Response.Sanitize(sessions, "user_id", "user"),
 		"total":      total,
 		"pagination": pagination,
 	})
