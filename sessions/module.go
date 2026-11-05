@@ -29,7 +29,7 @@ func NewCustom[T Accessor](db *database.Service, factory func() T) *Module[T] {
 }
 
 func (m *Module[T]) Start(srv *server.Service) {
-	handler := newHandler()
+	handler := newHandler(m.service)
 	registerRoutes(srv, handler)
 	go m.worker.Clean()
 }

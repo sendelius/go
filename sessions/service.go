@@ -22,7 +22,7 @@ type ServiceInterface[T Accessor] interface {
 	Check(w http.ResponseWriter, r *http.Request) (T, error)
 	GetByToken(token string) (T, error)
 	Create(w http.ResponseWriter, userID string) (T, error)
-	CreateBearer(userID string) (string, error)
+	CreateBearer(userID string, comment string) (T, error)
 	RemoveCurrent(w http.ResponseWriter, r *http.Request) error
 	RemoveExpired() error
 	RemoveByToken(token string)
@@ -79,14 +79,14 @@ func (s *Service[T]) Check(w http.ResponseWriter, r *http.Request) (T, error) {
 
 	session := sessionItem.GetModel()
 	now := time.Now()
-	if !session.ExpiresAt.IsZero() && session.ExpiresAt.Before(now) {
+	if !session.IsBearer && session.ExpiresAt.Before(now) {
 		s.RemoveByToken(token)
 		return zero, apperrors.New(ErrorSessionExpired, "сессия истекла").
 			Status(http.StatusUnauthorized).
 			Build()
 	}
 
-	if !session.ExpiresAt.IsZero() && session.ExpiresAt.Sub(now) < s.sessionTTL-time.Hour {
+	if !session.IsBearer && session.ExpiresAt.Sub(now) < s.sessionTTL-time.Hour {
 		expiresAt := now.Add(s.sessionTTL)
 		session.ExpiresAt = expiresAt
 		err = s.Db().Model(sessionItem).Where("id = ?", session.ID).Update("expires_at", expiresAt).Error
@@ -113,7 +113,7 @@ func (s *Service[T]) Create(w http.ResponseWriter, userID string) (T, error) {
 
 	token, err := generateToken(64)
 	if err != nil {
-		return zero, apperrors.New(ErrorCreate, "ошибка генерации токена").
+		return zero, apperrors.New(ErrorCreate, "не удалось создать токен").
 			Field("login").
 			Status(http.StatusUnauthorized).
 			Cause(err).
@@ -125,10 +125,11 @@ func (s *Service[T]) Create(w http.ResponseWriter, userID string) (T, error) {
 	session := sessionItem.GetModel()
 	session.UserID = userID
 	session.Token = hashToken(token)
+	session.IsBearer = false
 	session.ExpiresAt = expiresAt
 
 	if err = s.Db().Create(sessionItem).Error; err != nil {
-		return zero, apperrors.New(ErrorCreateComplete, "ошибка сохранения сессии").
+		return zero, apperrors.New(ErrorCreateComplete, "не удалось сохранить сессию").
 			Field("login").
 			Status(http.StatusUnauthorized).
 			Cause(err).
@@ -140,44 +141,76 @@ func (s *Service[T]) Create(w http.ResponseWriter, userID string) (T, error) {
 	return sessionItem, nil
 }
 
-func (s *Service[T]) CreateBearer(userID string) (string, error) {
+func (s *Service[T]) CreateBearer(userID string, comment string) (T, error) {
+	var zero T
+
 	token, err := generateToken(64)
 	if err != nil {
-		return "", apperrors.New(ErrorBearerCreate, "не удалось создать токен").Cause(err).Build()
+		return zero, apperrors.New(ErrorBearerCreate, "не удалось создать токен").Cause(err).Build()
 	}
 
-	hash := hashToken(token)
 	sessionItem := s.factory()
-	err = s.Db().Where("user_id = ? AND expires_at = ?", userID, time.Time{}).First(sessionItem).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		session := sessionItem.GetModel()
-		session.UserID = userID
-		session.Token = hash
-		if err = s.Db().Create(sessionItem).Error; err != nil {
-			return "", apperrors.New(ErrorBearerCreate, "не удалось создать токен").Cause(err).Build()
-		}
-		return token, nil
+	session := sessionItem.GetModel()
+	session.UserID = userID
+	session.Token = hashToken(token)
+	session.Comment = comment
+	session.IsBearer = true
+	session.ExpiresAt = time.Time{}
+	if err = s.Db().Create(sessionItem).Error; err != nil {
+		return zero, apperrors.New(ErrorBearerCreate, "не удалось создать токен").Cause(err).Build()
 	}
+
+	session.Token = token
+	return sessionItem, nil
+}
+
+func (s *Service[T]) UpdateBearer(id string, comment string) (T, error) {
+	var zero T
+
+	token, err := generateToken(64)
 	if err != nil {
-		return "", apperrors.New(ErrorBearerCreate, "не удалось создать токен").Cause(err).Build()
+		return zero, apperrors.New(ErrorBearerUpdate, "не удалось создать токен").Cause(err).Build()
+	}
+
+	sessionItem := s.factory()
+	if err := s.Db().First(sessionItem, "is_bearer = ? AND id = ?", true, id).Error; err != nil {
+		return zero, errors.New("данные не найдены")
 	}
 
 	session := sessionItem.GetModel()
-	if err = s.Db().Model(sessionItem).Update("token", hash).Error; err != nil {
-		return "", apperrors.New(ErrorBearerUpdate, "не удалось обновить токен").Cause(err).Build()
+	session.Token = hashToken(token)
+	session.Comment = comment
+	if err := s.Db().Save(sessionItem).Error; err != nil {
+		return zero, apperrors.New(ErrorBearerUpdate, "не удалось обновить токен").Cause(err).Build()
 	}
 
-	session.Token = hash
-	return token, nil
+	if err = s.Db().Create(sessionItem).Error; err != nil {
+		return zero, apperrors.New(ErrorBearerUpdate, "не удалось создать токен").Cause(err).Build()
+	}
+
+	session.Token = token
+	return sessionItem, nil
 }
 
 func (s *Service[T]) RemoveCurrent(w http.ResponseWriter, r *http.Request) error {
-	cookie, err := getCookieToken(r)
-	if err != nil {
-		return apperrors.New(ErrorLogoutNotFound, "сессия не найдена").Cause(err).Build()
+	var token string
+
+	bearer, err := getBearerToken(r)
+	if err == nil {
+		token = strings.TrimSpace(bearer)
+	} else {
+		cookie, cookieErr := getCookieToken(r)
+		if cookieErr != nil {
+			return apperrors.New(ErrorLogoutNotFound, "сессия не найдена").Cause(cookieErr).Build()
+		}
+		token = strings.TrimSpace(cookie.Value)
 	}
 
-	err = s.Db().Where("token = ?", hashToken(cookie.Value)).Delete(s.factory()).Error
+	if token == "" {
+		return apperrors.New(ErrorLogoutNotFound, "сессия не найдена").Build()
+	}
+
+	err = s.Db().Where("token = ?", hashToken(token)).Delete(s.factory()).Error
 	if err != nil {
 		return apperrors.New(ErrorLogoutComplete, "не удалось завершить сессию").Cause(err).Build()
 	}
@@ -187,7 +220,7 @@ func (s *Service[T]) RemoveCurrent(w http.ResponseWriter, r *http.Request) error
 }
 
 func (s *Service[T]) RemoveExpired() error {
-	err := s.Db().Where("expires_at > ? AND expires_at < ?", time.Time{}, time.Now()).Delete(s.factory()).Error
+	err := s.Db().Where("is_bearer = ? AND expires_at > ? AND expires_at < ?", false, time.Time{}, time.Now()).Delete(s.factory()).Error
 	return s.Error(err)
 }
 

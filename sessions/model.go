@@ -12,6 +12,8 @@ type Session struct {
 	UserID    string     `json:"user_id" gorm:"index;not null"`               // идентификатор пользователя
 	User      users.User `json:"user" gorm:"foreignKey:UserID;references:ID"` // объект с пользователем
 	Token     string     `json:"-" gorm:"type:char(64);uniqueIndex"`          // токен
+	Comment   string     `json:"comment"`                                     // комментарий
+	IsBearer  bool       `json:"is_bearer" gorm:"default:false"`              // является ли токен bearer
 	ExpiresAt time.Time  `json:"expires_at"`                                  // дата окончания
 }
 

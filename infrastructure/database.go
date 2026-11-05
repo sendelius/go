@@ -40,15 +40,10 @@ type ListConfig struct {
 
 func defaultListConfig() *ListConfig {
 	return &ListConfig{
-		SearchFields: []string{
-			"title",
-			"slug",
-		},
+		SearchFields:     []string{},
 		SearchSimilarity: false,
 		FilterFields:     []string{},
-		SortFields: []string{
-			"id",
-		},
+		SortFields:       []string{},
 	}
 }
 
