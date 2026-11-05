@@ -8,8 +8,13 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/schema"
 	"github.com/sendelius/go/apperrors"
 )
+
+var validate = validator.New()
+var queryDecoder = schema.NewDecoder()
 
 type contextKey struct{}
 

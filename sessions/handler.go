@@ -42,7 +42,7 @@ func (h *Handler[T]) GetList(w http.ResponseWriter, r *http.Request) {
 			request.UserID = current.GetModel().UserID
 		}
 	}
-	requestList.SetQueryParam("filters.user_id", request.UserID)
+	requestList.SetFilter("user_id", request.UserID)
 
 	sessions, total, pagination, err := h.sessions.GetList(requestList, &infrastructure.ListConfig{
 		FilterFields: []string{"is_bearer"},

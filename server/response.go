@@ -5,15 +5,10 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-playground/validator/v10"
-	"github.com/gorilla/schema"
 	"github.com/iancoleman/orderedmap"
 	"github.com/sendelius/go/apperrors"
 	"github.com/sendelius/go/env"
 )
-
-var validate = validator.New()
-var queryDecoder = schema.NewDecoder()
 
 type Response struct {
 }

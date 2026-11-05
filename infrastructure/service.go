@@ -152,7 +152,9 @@ func (s *Service[T]) CloneBulk(ids []string) (*BulkResult, error) {
 }
 
 func (s *Service[T]) GetListRequest() *ListRequest {
-	return &ListRequest{}
+	return &ListRequest{
+		Filters: make(map[string]string),
+	}
 }
 
 func (s *Service[T]) GetList(request *ListRequest, conf *ListConfig) ([]T, int64, ListPagination, error) {

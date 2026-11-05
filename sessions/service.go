@@ -90,7 +90,7 @@ func (s *Service[T]) Check(w http.ResponseWriter, r *http.Request) (T, error) {
 	if !session.IsBearer && session.ExpiresAt.Sub(now) < s.sessionTTL-time.Hour {
 		expiresAt := now.Add(s.sessionTTL)
 		session.ExpiresAt = expiresAt
-		err = s.Db().Model(sessionItem).Where("id = ?", session.ID).Update("expires_at", expiresAt).Error
+		err = s.Db().Model(s.factory()).Where("id = ?", session.ID).Update("expires_at", expiresAt).Error
 		if err != nil {
 			return zero, apperrors.New(ErrorSessionExtend, "не удалось продлить сессию").
 				Status(http.StatusUnauthorized).
@@ -175,7 +175,7 @@ func (s *Service[T]) UpdateBearer(id string, comment string) (T, error) {
 
 	sessionItem := s.factory()
 	if err := s.Db().First(sessionItem, "is_bearer = ? AND id = ?", true, id).Error; err != nil {
-		return zero, errors.New("данные не найдены")
+		return zero, apperrors.New(ErrorBearerUpdate, "данные не найдены").Cause(err).Build()
 	}
 
 	session := sessionItem.GetModel()
@@ -183,10 +183,6 @@ func (s *Service[T]) UpdateBearer(id string, comment string) (T, error) {
 	session.Comment = comment
 	if err := s.Db().Save(sessionItem).Error; err != nil {
 		return zero, apperrors.New(ErrorBearerUpdate, "не удалось обновить токен").Cause(err).Build()
-	}
-
-	if err = s.Db().Create(sessionItem).Error; err != nil {
-		return zero, apperrors.New(ErrorBearerUpdate, "не удалось создать токен").Cause(err).Build()
 	}
 
 	session.Token = token

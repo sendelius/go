@@ -65,3 +65,17 @@ func (r *ListRequest) SetQueryParam(key string, value any) {
 		}
 	}
 }
+
+func (r *ListRequest) SetFilter(key string, value string) {
+	r.Filters[key] = value
+}
+
+func (r *ListRequest) SetSearch(key string, value string) {
+	r.Search.Key = key
+	r.Search.Value = value
+}
+
+func (r *ListRequest) SetSort(key string, value string) {
+	r.Sort.Key = key
+	r.Sort.Type = value
+}
