@@ -33,14 +33,13 @@ func (h *Request) Validate(w http.ResponseWriter, r *http.Request, dst any) bool
 		query := r.URL.Query()
 
 		for key := range query {
-			parts := strings.SplitN(key, ".", 2)
-
-			if len(parts) == 2 {
+			if strings.Contains(key, ".") {
 				query.Del(key)
 			}
 		}
 
-		err = queryDecoder.Decode(dst, query)
+		err = DecodeQuery(dst, query)
+
 		if err == nil {
 			setQueryParams(dst, params)
 		}
