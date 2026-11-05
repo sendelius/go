@@ -23,6 +23,7 @@ type ServiceInterface[T Accessor] interface {
 	GetByToken(token string) (T, error)
 	Create(w http.ResponseWriter, userID string) (T, error)
 	CreateBearer(userID string, comment string) (T, error)
+	UpdateBearer(id string, comment string) (T, error)
 	RemoveCurrent(w http.ResponseWriter, r *http.Request) error
 	RemoveExpired() error
 	RemoveByToken(token string)
