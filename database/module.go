@@ -14,12 +14,17 @@ type Module struct {
 	service *Service
 }
 
-func New() *Module {
+func New(dbName ...string) *Module {
 	service := newService()
 	var err error
 	var dsn string
 
-	dsn, err = genDbDsn()
+	db := ""
+	if len(dbName) > 0 {
+		db = dbName[0]
+	}
+
+	dsn, err = genDbDsn(db)
 	if err != nil {
 		panic(err)
 	}
