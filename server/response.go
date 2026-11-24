@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/iancoleman/orderedmap"
 	"github.com/sendelius/go/apperrors"
@@ -82,11 +83,20 @@ func (h *Response) Sanitize(v any, hidden ...string) any {
 
 func (h *Response) writeResponse(w http.ResponseWriter, r *http.Request, data any, status ...int) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Vary", "Origin")
 
-	w.Header().Set("Access-Control-Allow-Origin", "https://"+env.String("BASE_DOMAIN"))
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	origin := r.Header.Get("Origin")
+	origins := env.Array("CORS_ORIGINS", ",")
+	for _, allowed := range origins {
+		if origin == strings.TrimSpace(allowed) && origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+			break
+		}
+	}
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
